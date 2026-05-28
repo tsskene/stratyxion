@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STRATYXION — Monitoramento Estratégico</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#d0d5e0;--bg2:#ffffff;--bg3:#e4e8f0;--bg4:#cdd2de;--bg5:#bcc2d0;
+  --border:#c0c6d4;--border2:#adb4c4;--border3:#9aa2b4;
+  --text:#1a2035;--text2:#4a5578;--text3:#8a94ad;
+  --acc:#3b82f6;--acc2:#1d4ed8;--acc3:#60a5fa;
+  --G:#16a34a;--Gbg:#dcfce7;--Gb:#86efac;
+  --B:#2563eb;--Bbg:#dbeafe;--Bb:#93c5fd;
+  --Y:#d97706;--Ybg:#fef3c7;--Yb:#fcd34d;
+  --R:#dc2626;--Rbg:#fee2e2;--Rb:#fca5a5;
+  --font-d:'Syne',sans-serif;
+  --font-b:'DM Sans',sans-serif;
+  --r:10px;--rl:16px;
+}
+body{background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:14px;line-height:1.6;overflow-x:hidden}
+
+/* ── SCREENS ── */
+.scr{display:none}.scr.on{display:flex}
+
+/* ── AUTH ── */
+#auth{min-height:100vh;align-items:center;justify-content:center;background:#c4c9d8;position:relative;overflow:hidden}
+.auth-grid{position:absolute;inset:0;background-image:linear-gradient(#b0b6c6 1px,transparent 1px),linear-gradient(90deg,#b0b6c6 1px,transparent 1px);background-size:60px 60px;opacity:.4}
+.auth-glow{position:absolute;width:700px;height:700px;background:radial-gradient(circle,rgba(59,130,246,.1) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%)}
+.auth-card{position:relative;z-index:1;background:#fff;border:1px solid var(--border2);border-radius:20px;padding:48px 40px;width:100%;max-width:440px;box-shadow:0 8px 32px rgba(0,0,0,0.1)}
+.auth-logo{text-align:center;margin-bottom:32px}
+.brand{font-family:var(--font-d);font-size:24px;font-weight:800;letter-spacing:3px;background:linear-gradient(135deg,#60a5fa,#3b82f6,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.auth-sub{font-size:11px;color:var(--text3);letter-spacing:4px;text-transform:uppercase;margin-top:6px}
+.auth-err{background:var(--Rbg);border:1px solid var(--Rb);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--R);margin-bottom:16px;display:none}
+.fld{margin-bottom:16px}
+.fld label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:6px;letter-spacing:.5px;text-transform:uppercase}
+.fld input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:13px 15px;color:var(--text);font-family:var(--font-b);font-size:14px;outline:none;transition:.2s}
+.fld input:focus{border-color:var(--acc)}
+.btn-auth{width:100%;background:var(--acc);border:none;border-radius:var(--r);padding:14px;color:#fff;font-family:var(--font-d);font-size:14px;font-weight:700;letter-spacing:1px;cursor:pointer;transition:.2s;margin-top:4px}
+.btn-auth:hover{background:var(--acc2)}
+.btn-auth:disabled{opacity:.5;cursor:not-allowed}
+.auth-hint{text-align:center;font-size:12px;color:var(--text3);margin-top:20px}
+
+/* ── APP LAYOUT ── */
+#app{min-height:100vh;flex-direction:row}
+.sidebar{width:240px;background:#1e2a45;border-right:1px solid #16213a;flex-shrink:0;display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .25s}
+.sb-logo{padding:24px 16px 16px;border-bottom:1px solid rgba(255,255,255,0.08)}
+.sb-brand{font-family:var(--font-d);font-size:15px;font-weight:800;letter-spacing:2px;background:linear-gradient(135deg,#60a5fa,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap}
+.sb-tag{font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.sb-nav{flex:1;padding:12px 0;overflow-y:auto}
+.nav-sec{padding:0 12px;margin-bottom:4px}
+.nav-lbl{font-size:10px;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:2px;text-transform:uppercase;padding:8px 8px 4px}
+.nav-it{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r);cursor:pointer;font-size:13px;color:rgba(255,255,255,0.8);transition:.15s;margin-bottom:1px;border:1px solid transparent}
+.nav-it:hover{background:rgba(255,255,255,0.1);color:#ffffff}
+.nav-it.on{background:rgba(59,130,246,0.25);color:#93c5fd;border-color:rgba(59,130,246,0.4)}
+.nav-ic{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.sb-foot{padding:12px;border-top:1px solid rgba(255,255,255,0.08)}
+.user-box{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);background:rgba(255,255,255,0.06)}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--acc),#6366f1);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.user-nm{font-size:12px;font-weight:600;color:rgba(255,255,255,0.95);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-rl{font-size:10px;color:rgba(255,255,255,0.55)}
+.logout-btn{background:none;border:none;color:rgba(255,255,255,0.55);cursor:pointer;font-size:14px;padding:4px;border-radius:4px;transition:.15s}
+.logout-btn:hover{color:#fca5a5}
+
+/* ── TOPBAR MOBILE ── */
+.topbar{display:none;background:#1e2a45;border-bottom:1px solid #16213a;height:52px;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:50}
+.top-brand{font-family:var(--font-d);font-size:16px;font-weight:800;letter-spacing:2px;color:#93c5fd}
+.menu-btn{background:none;border:1px solid rgba(255,255,255,0.15);border-radius:7px;color:rgba(255,255,255,0.6);font-size:18px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+/* ── OVERLAY (mobile drawer) ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+.overlay.on{display:block}
+
+/* ── MAIN ── */
+.main{margin-left:240px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.content{flex:1;padding:28px}
+.page-hd{margin-bottom:24px}
+.page-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}
+.page-title{font-family:var(--font-d);font-size:22px;font-weight:700;color:#000000}
+.page-sub{font-size:13px;color:var(--text2);margin-top:4px}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:20px;margin-bottom:14px}
+.card-sm{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px}
+.card-title{font-family:var(--font-d);font-size:14px;font-weight:600;margin-bottom:14px;color:#000000}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+
+/* ── METRICS ── */
+.met{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px}
+.met-lbl{font-size:11px;color:#000000;letter-spacing:.5px;text-transform:uppercase;margin-bottom:8px;font-weight:700}
+.met-val{font-family:var(--font-d);font-size:28px;font-weight:800;line-height:1}
+.met-sub{margin-top:10px}
+
+/* ── STATUS ── */
+.c-G{color:var(--G)}.c-B{color:var(--B)}.c-Y{color:var(--Y)}.c-R{color:var(--R)}
+.bg-G{background:var(--Gbg);border-color:var(--Gb)!important}
+.bg-B{background:var(--Bbg);border-color:var(--Bb)!important}
+.bg-Y{background:var(--Ybg);border-color:var(--Yb)!important}
+.bg-R{background:var(--Rbg);border-color:var(--Rb)!important}
+.badge{display:inline-flex;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid}
+.b-G{background:var(--Gbg);border-color:var(--Gb);color:var(--G)}
+.b-B{background:var(--Bbg);border-color:var(--Bb);color:var(--B)}
+.b-Y{background:var(--Ybg);border-color:var(--Yb);color:var(--Y)}
+.b-R{background:var(--Rbg);border-color:var(--Rb);color:var(--R)}
+
+/* ── PROGRESS ── */
+.pbar{height:5px;background:var(--bg5);border-radius:3px;overflow:hidden;width:100%}
+.pfill{height:100%;border-radius:3px;transition:width .4s}
+
+/* ── OBJECTIVE CARDS ── */
+.obj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;padding:16px}
+.obj-card{border:1px solid;border-radius:var(--r);padding:14px;cursor:pointer;transition:.15s}
+.obj-card:hover{transform:translateY(-2px)}
+.obj-name{font-size:13px;font-weight:600;margin-bottom:4px}
+.obj-resp{font-size:11px;color:var(--text2);margin-bottom:10px}
+.obj-score{font-family:var(--font-d);font-size:24px;font-weight:800}
+
+/* ── PERSPECTIVE ── */
+.persp-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;margin-bottom:16px}
+.persp-hd{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.persp-nm{font-family:var(--font-d);font-size:15px;font-weight:700;letter-spacing:.5px}
+
+/* ── OKR ── */
+.okr-unit{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;overflow:hidden}
+.okr-u-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;background:var(--bg3)}
+.okr-u-nm{font-family:var(--font-d);font-size:14px;font-weight:600}
+.okr-body{padding:0 14px 14px}
+.okr-resp{display:flex;align-items:center;justify-content:space-between;padding:11px 12px;border-left:2px solid var(--border2);margin-top:10px;cursor:pointer;border-radius:0 var(--r) var(--r) 0;transition:.15s}
+.okr-resp:hover{border-left-color:var(--acc)}
+.okr-resp-nm{font-size:13px;font-weight:500}
+.okr-obj{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-left:2px solid var(--border);margin:5px 0 5px 14px;border-radius:0 var(--r) var(--r) 0}
+.okr-obj-nm{font-size:12px;font-weight:500;flex:1;min-width:0;margin-right:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.okr-kr{display:flex;align-items:center;gap:10px;padding:6px 12px;margin-left:26px}
+.okr-kr-nm{font-size:12px;color:var(--text2);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kr-bar{flex:0 0 80px;height:4px;background:var(--bg5);border-radius:2px;overflow:hidden}
+.kr-fill{height:100%;border-radius:2px}
+
+/* ── PROJECTS ── */
+.proj-card{background:var(--bg2);border:1px solid;border-radius:var(--rl);padding:18px 20px;margin-bottom:10px;cursor:pointer;transition:.15s}
+.proj-card:hover{border-color:var(--border3)}
+.proj-nm{font-family:var(--font-d);font-size:15px;font-weight:600;margin-bottom:3px}
+.proj-meta{font-size:11px;color:var(--text2);margin-bottom:10px}
+.proj-score{font-family:var(--font-d);font-size:26px;font-weight:800}
+
+/* ── MILESTONE ── */
+.mstone{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.mstone:last-child{border-bottom:none}
+.mcheck{width:22px;height:22px;border-radius:5px;border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;flex-shrink:0;transition:.15s}
+.mcheck.done{background:var(--Gbg);border-color:var(--Gb);color:var(--G)}
+.mstone-nm{flex:1;font-size:13px}
+.mstone-nm.done{text-decoration:line-through;color:var(--text3)}
+
+/* ── LEGEND ── */
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;padding:12px 18px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-top:4px}
+.leg-i{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.leg-d{width:7px;height:7px;border-radius:50%}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 16px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);min-height:36px;font-family:var(--font-b);transition:.15s}
+.btn:hover{color:var(--text);border-color:var(--border3)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-p{background:var(--acc);border-color:var(--acc);color:#fff}
+.btn-p:hover{background:var(--acc2)}
+.btn-d{background:var(--Rbg);border-color:var(--Rb);color:var(--R)}
+.btn-sm{padding:6px 12px;font-size:12px;min-height:32px}
+.btn-full{width:100%}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+
+/* ── FORMS ── */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;letter-spacing:.3px;text-transform:uppercase}
+.fi{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;color:var(--text);font-family:var(--font-b);font-size:13px;outline:none;transition:.2s}
+.fi:focus{border-color:var(--acc)}
+.fsel{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;color:var(--text);font-family:var(--font-b);font-size:13px;outline:none}
+.frow{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.range-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px}
+.range-val{font-size:14px;font-weight:700;color:var(--acc)}
+input[type=range]{width:100%;-webkit-appearance:none;height:4px;background:var(--bg5);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--acc);cursor:pointer;border:2px solid var(--bg3)}
+
+/* ── MODAL ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto}
+.modal-ov.on{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);width:100%;max-width:640px;max-height:90vh;overflow-y:auto}
+.modal-lg{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);width:calc(100vw - 280px);max-width:1200px;min-width:680px;max-height:90vh;overflow-y:auto}
+.modal-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);z-index:1}
+.modal-title{font-family:var(--font-d);font-size:16px;font-weight:700;flex:1}
+.modal-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.mclose{background:none;border:none;font-size:24px;color:var(--text3);cursor:pointer;line-height:1}
+.modal-bd{padding:22px 28px}
+.modal-bd-lg{padding:22px 28px;max-height:78vh;overflow-y:auto}
+
+/* ── SNACK ── */
+.snack{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:11px 20px;font-size:13px;font-weight:500;color:var(--text);z-index:999;white-space:nowrap;display:none;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+.snack.on{display:block}
+.snack.ok{border-left:3px solid var(--G);color:var(--G)}
+.snack.err{border-left:3px solid var(--R);color:var(--R)}
+.snack.info{border-left:3px solid var(--B);color:var(--B)}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;padding:48px;color:var(--text3);font-size:13px;gap:10px}
+.spin{width:20px;height:20px;border:2px solid var(--border2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── UTILS ── */
+.flex{display:flex}.ic{align-items:center}.jb{justify-content:space-between}
+.gap2{gap:8px}.gap3{gap:12px}.gap4{gap:16px}
+.mt2{margin-top:10px}.mt3{margin-top:16px}.mb2{margin-bottom:10px}
+.chip{display:inline-flex;padding:2px 9px;border-radius:20px;background:var(--bg3);border:1px solid var(--border);font-size:11px;color:var(--text2)}
+.divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .topbar{display:flex}
+  .content{padding:16px}
+  .grid4{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .obj-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+  .frow{grid-template-columns:1fr}
+  .modal{max-width:100%;max-height:92vh}
+  .modal-hd,.modal-bd{padding:16px 18px}
+}
+@media(max-width:480px){
+  .grid4,.grid3,.grid2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .auth-card{padding:28px 20px}
+}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div id="snack" class="snack"></div>
+
+<!-- ══ AUTH ══ -->
+<div id="auth" class="scr on">
+  <div class="auth-grid"></div>
+  <div class="auth-glow"></div>
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="brand">STRATYXION</div>
+      <div class="auth-sub">Monitoramento Estratégico</div>
+    </div>
+    <div id="aerr" class="auth-err">E-mail ou senha inválidos.</div>
+    <div class="fld">
+      <label>E-mail</label>
+      <input type="email" id="lu" placeholder="seu@email.com" autocomplete="email">
+    </div>
+    <div class="fld">
+      <label>Senha</label>
+      <input type="password" id="lp" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-auth" id="btn-login" onclick="doLogin()">ENTRAR</button>
+    <div class="auth-hint">Acesse com o e-mail cadastrado no Supabase</div>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app" class="scr">
+
+  <!-- Overlay mobile -->
+  <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-logo">
+      <div class="sb-brand">STRATYXION</div>
+      <div class="sb-tag">Strategic Intelligence</div>
+      <div class="sb-tag" style="margin-top:4px;letter-spacing:1.5px">Ciclo: 2025-2026</div>
+      <div class="sb-tag" style="margin-top:4px;letter-spacing:1px">Atualizado em: <span id="sb-updated">--/--/--</span></div>
+    </div>
+    <nav class="sb-nav">
+      <div class="nav-sec">
+        <div class="nav-lbl">Principal</div>
+        <div class="nav-it on" id="ni-dash" onclick="go('dash')"><span class="nav-ic">⬡</span>Dashboard Geral</div>
+      </div>
+      <div class="nav-sec">
+        <div class="nav-lbl">Bloco 1</div>
+        <div class="nav-it" id="ni-mapa" onclick="go('mapa')"><span class="nav-ic">◈</span>Mapa Estratégico</div>
+      </div>
+      <div class="nav-sec">
+        <div class="nav-lbl">Bloco 2</div>
+        <div class="nav-it" id="ni-dir" onclick="go('dir')"><span class="nav-ic">◉</span>Diretrizes Anuais</div>
+        <div class="nav-it" id="ni-okr" onclick="go('okr')"><span class="nav-ic">◎</span>OKR / Metas</div>
+      </div>
+      <div class="nav-sec">
+        <div class="nav-lbl">Bloco 3</div>
+        <div class="nav-it" id="ni-proj" onclick="go('proj')"><span class="nav-ic">◆</span>Projetos Especiais</div>
+      </div>
+      <div class="nav-sec" id="admin-nav" style="display:none">
+        <div class="nav-lbl">Admin</div>
+        <div class="nav-it" id="ni-adm" onclick="go('adm')"><span class="nav-ic">⚙</span>Configurações</div>
+      </div>
+    </nav>
+    <div class="sb-foot">
+      <div class="user-box">
+        <div class="avatar" id="av">A</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-nm" id="unm">Usuário</div>
+          <div class="user-rl" id="url">Carregando...</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="Sair">↩</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar" id="topbar">
+      <span class="top-brand">STRATYXION</span>
+      <button class="menu-btn" onclick="openSidebar()">☰</button>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-ov" id="mov">
+  <div id="mbox"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// STRATYXION v2 — Supabase Integration
+// ══════════════════════════════════════════
+const SB = supabase.createClient(
+  'https://qdmkrygedxnxfvoqipbo.supabase.co',
+  'sb_publishable_aJuMv_0DSGXLroi_xyco7w_4CXvlJdT'
+);
+
+var CU = null;
+var D  = { perspectivas:[], objetivos:[], indicadores:[], unidades:[], responsaveis:[], okrs:[], krs:[], projetos:[] };
+var _pg = 'dash';
+var _salvando = false; // flag: bloqueia realtime enquanto o próprio usuário salva
+
+// ── HELPERS ──────────────────────────────
+const g  = id => document.getElementById(id);
+const avg = a => a.length ? Math.round(a.reduce((s,v)=>s+v,0)/a.length) : 0;
+const gc  = v => v>=80?'G':v>=61?'B':v>=41?'Y':'R';
+const ghx = v => v>=80?'#10b981':v>=61?'#3b82f6':v>=41?'#f59e0b':'#ef4444';
+const badge = v => { const c=gc(v),l={G:'Excelente',B:'Muito Bom',Y:'Zona de Alerta',R:'Inadequado'}; return `<span class="badge b-${c}">${l[c]}</span>`; };
+const pbar  = (v,h=5) => `<div class="pbar" style="height:${h}px"><div class="pfill" style="width:${v}%;background:${ghx(v)}"></div></div>`;
+const oScore  = id => avg(D.indicadores.filter(i=>i.oId===id).map(i=>i.res));
+const okScore = id => avg(D.krs.filter(k=>k.okId===id).map(k=>k.p));
+const rScore  = id => avg(D.okrs.filter(o=>o.rId===id).map(o=>okScore(o.id)));
+const uScore  = id => avg(D.responsaveis.filter(r=>r.uId===id).map(r=>rScore(r.id)));
+const ppct    = p  => p.marcos.length ? Math.round(p.marcos.filter(m=>m.done).length/p.marcos.length*100) : 0;
+
+function notify(msg, type='ok'){
+  const s=g('snack'); s.textContent=msg; s.className=`snack on ${type}`;
+  clearTimeout(window._nt); window._nt=setTimeout(()=>s.className='snack',3000);
+}
+function setPage(html){ g('content').innerHTML=html; window.scrollTo(0,0); }
+function loading(msg='Carregando...'){ setPage(`<div class="loading"><div class="spin"></div>${msg}</div>`); }
+
+const met = (lbl,val,sub) =>
+  `<div class="met"><div class="met-lbl">${lbl}</div><div class="met-val">${val}</div><div class="met-sub">${sub}</div></div>`;
+
+const leg = () =>
+  `<div class="legend">
+    <div class="leg-i"><div class="leg-d" style="background:#10b981"></div>Excelente (80–100%)</div>
+    <div class="leg-i"><div class="leg-d" style="background:#3b82f6"></div>Muito Bom (61–79%)</div>
+    <div class="leg-i"><div class="leg-d" style="background:#f59e0b"></div>Zona de Alerta (41–60%)</div>
+    <div class="leg-i"><div class="leg-d" style="background:#ef4444"></div>Inadequado (&lt;41%)</div>
+  </div>`;
+
+// ── SIDEBAR MOBILE ────────────────────────
+function openSidebar(){ g('sidebar').classList.add('open'); g('overlay').classList.add('on'); }
+function closeSidebar(){ g('sidebar').classList.remove('open'); g('overlay').classList.remove('on'); }
+
+// ── SUPABASE DATA ─────────────────────────
+async function loadAll(){
+  try {
+    const [p,o,i,u,r,ok,kr,pr,ma] = await Promise.all([
+      SB.from('perspectivas').select('*').order('ordem'),
+      SB.from('objetivos').select('*').order('created_at'),
+      SB.from('indicadores').select('*').order('created_at'),
+      SB.from('unidades').select('*').order('created_at'),
+      SB.from('responsaveis').select('*').order('created_at'),
+      SB.from('objetivos_okr').select('*').order('created_at'),
+      SB.from('resultados_chave').select('*').order('created_at'),
+      SB.from('projetos').select('*').order('created_at'),
+      SB.from('marcos').select('*').order('created_at')
+    ]);
+    D.perspectivas = (p.data||[]).map(x=>({id:x.id,name:x.nome}));
+    D.objetivos    = (o.data||[]).map(x=>({id:x.id,pId:x.perspectiva_id,name:x.nome,resp:x.responsavel||''}));
+    D.indicadores  = (i.data||[]).map(x=>({id:x.id,oId:x.objetivo_id,nome:x.nome,desc:x.descricao||'',tipo:x.tipo||'',meta:x.meta||0,resp:x.responsavel||'',res:Number(x.resultado)||0}));
+    D.unidades     = (u.data||[]).map(x=>({id:x.id,name:x.nome}));
+    D.responsaveis = (r.data||[]).map(x=>({id:x.id,uId:x.unidade_id,name:x.nome}));
+    D.okrs         = (ok.data||[]).map(x=>({id:x.id,rId:x.responsavel_id,name:x.nome}));
+    D.krs          = (kr.data||[]).map(x=>({id:x.id,okId:x.objetivo_okr_id,name:x.nome,p:Number(x.progresso)||0,data_inicio:x.data_inicio||null,data_fim:x.data_fim||null}));
+    D.projetos     = (pr.data||[]).map(x=>({id:x.id,name:x.nome,marcos:(ma.data||[]).filter(m=>m.projeto_id===x.id).map(m=>({id:m.id,name:m.nome,done:m.finalizado}))}));
+  } catch(e){ console.error(e); notify('Erro ao carregar dados','err'); }
+}
+
+async function loadAllAndLog(){
+  _salvando = true;
+  await loadAll();
+  await registrarUpdate();
+  setTimeout(()=>{ _salvando = false; }, 2000);
+}
+
+// ── LOG DE ATUALIZAÇÃO ────────────────────
+async function loadUpdated(){
+  try {
+    const {data} = await SB.from('sistema_log').select('updated_at,updated_by').order('updated_at',{ascending:false}).limit(1).single();
+    if(data){
+      const d = new Date(data.updated_at);
+      const dia  = String(d.getDate()).padStart(2,'0');
+      const mes  = String(d.getMonth()+1).padStart(2,'0');
+      const ano  = String(d.getFullYear()).slice(2);
+      const el = document.getElementById('sb-updated');
+      if(el) el.textContent = `${dia}/${mes}/${ano}`;
+    }
+  } catch(e){}
+}
+
+async function registrarUpdate(){
+  try {
+    const {data:logs} = await SB.from('sistema_log').select('id').limit(1);
+    if(logs && logs.length > 0){
+      await SB.from('sistema_log').update({updated_at: new Date().toISOString(), updated_by: CU?.name||'Admin'}).eq('id', logs[0].id);
+    } else {
+      await SB.from('sistema_log').insert({updated_at: new Date().toISOString(), updated_by: CU?.name||'Admin'});
+    }
+    await loadUpdated();
+  } catch(e){}
+}
+
+function setupRealtime(){
+  SB.channel('stratyxion')
+    .on('postgres_changes',{event:'*',schema:'public'}, async()=>{
+      // Ignora evento se o próprio usuário acabou de salvar
+      if(_salvando) return;
+      // Atualiza dados em segundo plano
+      await loadAll();
+      await loadUpdated();
+      // Só recarrega a tela se não houver modal aberto
+      const modalAberto = g('mov').classList.contains('on');
+      if(!modalAberto){
+        if(_pg==='dash') rDash();
+        else if(_pg==='mapa') rMapa();
+        else if(_pg==='okr') rOKR();
+        else if(_pg==='proj') rProj();
+        else if(_pg==='dir') rDir();
+        else if(_pg==='adm') rAdm();
+      }
+    }).subscribe();
+}
+
+// ── AUTH ─────────────────────────────────
+async function doLogin(){
+  const email=g('lu').value.trim(), pass=g('lp').value;
+  if(!email||!pass){ g('aerr').textContent='Preencha e-mail e senha.'; g('aerr').style.display='block'; return; }
+  const btn=g('btn-login'); btn.disabled=true; btn.textContent='ENTRANDO...';
+  g('aerr').style.display='none';
+  try {
+    const {data,error}=await SB.auth.signInWithPassword({email,password:pass});
+    if(error){
+      g('aerr').textContent='Erro: '+error.message;
+      g('aerr').style.display='block';
+      btn.disabled=false; btn.textContent='ENTRAR'; return;
+    }
+    const {data:perfil}=await SB.from('perfis').select('*').eq('id',data.user.id).single();
+    CU={
+      id:       data.user.id,
+      name:     perfil?.nome||email,
+      role:     perfil?.papel||'user',
+      unidadeId: perfil?.unidade_id||null
+    };
+    await loadAll(); bootApp(); setupRealtime();
+  } catch(e){
+    g('aerr').textContent='Erro de conexão: '+e.message;
+    g('aerr').style.display='block';
+    btn.disabled=false; btn.textContent='ENTRAR';
+  }
+}
+
+async function doLogout(){
+  await SB.auth.signOut(); CU=null;
+  g('app').classList.remove('on'); g('auth').classList.add('on');
+  g('aerr').style.display='none'; g('lu').value=''; g('lp').value='';
+  cModal(); closeSidebar();
+}
+
+function bootApp(){
+  g('auth').classList.remove('on'); g('app').classList.add('on');
+  const nm=CU.name.length>20?CU.name.slice(0,20)+'…':CU.name;
+  g('av').textContent=CU.name[0].toUpperCase();
+  g('unm').textContent=nm;
+
+  if(CU.role==='admin'){
+    g('url').textContent='Administrador';
+    g('admin-nav').style.display='block';
+    loadUpdated();
+    go('dash');
+  } else {
+    // Usuário comum — mostrar nome da unidade
+    const unit = D.unidades.find(u=>u.id===CU.unidadeId);
+    g('url').textContent = unit ? unit.name : 'Colaborador';
+    // Ocultar menus que não pode acessar
+    ['ni-dash','ni-mapa','ni-proj','ni-dir'].forEach(id=>{
+      const el=g(id); if(el) el.style.display='none';
+    });
+    loadUpdated();
+    go('okr');
+  }
+}
+
+// ── NAVIGATION ────────────────────────────
+function go(page){
+  // Usuário comum só pode acessar OKR
+  if(CU && CU.role!=='admin' && page!=='okr'){
+    page='okr';
+  }
+  _pg=page; closeSidebar();
+  document.querySelectorAll('.nav-it').forEach(n=>n.classList.remove('on'));
+  const ni=g(`ni-${page}`); if(ni) ni.classList.add('on');
+  cModal(); loading();
+  if(page==='dash') rDash();
+  else if(page==='dir') rDir();
+  else if(page==='mapa') rMapa();
+  else if(page==='okr') rOKR();
+  else if(page==='proj') rProj();
+  else if(page==='adm') rAdm();
+}
+
+// ── DASHBOARD ─────────────────────────────
+function rDash(){
+  const ms=avg(D.objetivos.map(o=>oScore(o.id)));
+  const os=avg(D.krs.map(k=>k.p));
+  const ps=avg(D.projetos.map(p=>ppct(p)));
+  const gs=avg([ms,os,ps]);
+  let h=`<div class="page-hd"><div class="page-title">Dashboard Geral</div><div class="page-sub">Visão consolidada do desempenho estratégico</div></div>`;
+  h+=`<div class="grid4">
+    ${met('Performance Geral',gs+'%',badge(gs))}
+    ${met('Mapa Estratégico',ms+'%',badge(ms))}
+    ${met('OKR / Metas',os+'%',badge(os))}
+    ${met('Projetos',ps+'%',badge(ps))}
+  </div>`;
+  h+=`<div class="grid2">
+    <div class="card">
+      <div class="card-title">Desempenho por bloco</div>
+      ${[{l:'Mapa Estratégico',v:ms},{l:'OKR / Metas',v:os},{l:'Projetos Especiais',v:ps}].map(it=>`
+        <div style="margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:var(--r);padding:10px 14px">
+          <div class="flex ic jb mb2"><span style="font-size:13px;color:#000000;font-weight:600">${it.l}</span><span style="font-weight:700;color:${ghx(it.v)}">${it.v}%</span></div>
+          ${pbar(it.v,8)}
+        </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Por perspectiva</div>
+      ${D.perspectivas.map(p=>{
+        const s=avg(D.objetivos.filter(o=>o.pId===p.id).map(o=>oScore(o.id)));
+        return `<div style="margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:var(--r);padding:10px 14px">
+          <div class="flex ic jb mb2"><span style="font-size:13px;color:#000000;font-weight:600">${p.name}</span><span style="font-weight:700;color:${ghx(s)}">${s}%</span></div>
+          ${pbar(s)}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  h+=`<div class="card"><div class="card-title">Status dos projetos</div>
+    ${D.projetos.map(p=>{const pc=ppct(p),done=p.marcos.filter(m=>m.done).length;return`
+      <div style="margin-bottom:10px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:var(--r);padding:10px 14px">
+        <div class="flex ic jb mb2">
+          <span style="font-size:13px;color:#000000;font-weight:600;flex:1;min-width:0;margin-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</span>
+          <span style="font-weight:700;color:${ghx(pc)}">${pc}%</span>
+        </div>
+        ${pbar(pc)}
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">${done}/${p.marcos.length} marcos</div>
+      </div>`;}).join('')}
+  </div>`;
+  h+=leg();
+  setPage(h);
+}
+
+// ── MAPA ESTRATÉGICO ──────────────────────
+function rMapa(){
+  const adm=CU.role==='admin';
+  let h=`<div class="page-hdr">
+    <div><div class="page-title">Mapa Estratégico</div><div class="page-sub">Perspectivas e objetivos com indicadores</div></div>
+    ${adm?`<button class="btn btn-p" onclick="openNovoObj()">+ Objetivo</button>`:''}
+  </div>`;
+  D.perspectivas.forEach(p=>{
+    const objs=D.objetivos.filter(o=>o.pId===p.id);
+    const ps=avg(objs.map(o=>oScore(o.id))); const c=gc(ps);
+    h+=`<div class="persp-card" style="border-top:3px solid var(--acc);background:var(--bg2)">
+      <div class="persp-hd" style="background:var(--bg3);border-bottom:1px solid var(--border)">
+        <div class="flex ic gap3">
+          <div><div class="persp-nm c-${c}">${p.name}</div><div style="font-size:11px;color:var(--text3)">${objs.length} objetivo(s)</div></div>
+        </div>
+        <div class="flex ic gap2">
+          <span style="font-family:var(--font-d);font-size:22px;font-weight:800;color:${ghx(ps)}">${ps}%</span>
+          ${badge(ps)}
+        </div>
+      </div>
+      <div class="obj-grid">
+        ${objs.map(o=>{const s=oScore(o.id),oc=gc(s);return`
+          <div class="obj-card bg-${oc}" onclick="openObj('${o.id}')">
+            <div class="obj-name c-${oc}">${o.name}</div>
+            <div class="obj-resp">${o.resp}</div>
+            ${pbar(s)}
+            <div class="flex ic jb mt2"><span class="obj-score c-${oc}">${s}%</span>${badge(s)}</div>
+          </div>`;}).join('')}
+        ${adm&&objs.length<8?`<div class="obj-card" style="border:1px dashed var(--border2);display:flex;align-items:center;justify-content:center;min-height:110px;color:var(--text3);font-size:12px;cursor:pointer" onclick="openNovoObj('${p.id}')">+ Adicionar Objetivo</div>`:''}
+      </div>
+    </div>`;
+  });
+  h+=leg();
+  setPage(h);
+}
+
+function openObj(id){
+  const o=D.objetivos.find(x=>x.id===id);
+  const inds=D.indicadores.filter(i=>i.oId===id);
+  const s=oScore(id); const adm=CU.role==='admin';
+  let h=`<div class="modal-hd">
+    <div><div class="modal-title">${o.name}</div><div class="modal-sub">Resp: ${o.resp} &middot; Score: <b style="color:${ghx(s)}">${s}%</b></div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd">
+    ${pbar(s,8)}
+    <div class="flex ic jb mt3 mb2">
+      <span style="font-weight:600">Indicadores (${inds.length}/3)</span>
+      ${adm&&inds.length<3?`<button class="btn btn-p btn-sm" onclick="openNovoInd('${id}')">+ Indicador</button>`:''}
+    </div>`;
+  if(!inds.length) h+=`<div style="text-align:center;padding:28px;color:var(--text3);font-size:13px">Nenhum indicador cadastrado</div>`;
+  inds.forEach(ind=>{
+    const ic=gc(ind.res);
+    h+=`<div class="card-sm bg-${ic}" style="margin-bottom:10px">
+      <div class="flex ic jb mb2">
+        <span style="font-weight:600;flex:1;min-width:0;margin-right:8px">${ind.nome}</span>
+        <span style="font-family:var(--font-d);font-size:22px;font-weight:800;color:${ghx(ind.res)}">${ind.res}%</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">${ind.desc}</div>
+      ${pbar(ind.res)}
+      <div class="grid3 mt2" style="gap:8px">
+        <div><div style="font-size:10px;color:var(--text3)">TIPO</div><div style="font-size:12px;margin-top:2px">${ind.tipo}</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">META</div><div style="font-size:12px;margin-top:2px">${ind.meta}</div></div>
+        <div><div style="font-size:10px;color:var(--text3)">RESPONSÁVEL</div><div style="font-size:12px;margin-top:2px">${ind.resp}</div></div>
+      </div>
+      ${adm?`<div class="flex gap2 mt2">
+        <button class="btn btn-sm" style="flex:1" onclick="editInd('${ind.id}')">Editar</button>
+        <button class="btn btn-d btn-sm" style="flex:1" onclick="delInd('${ind.id}','${id}')">Remover</button>
+      </div>`:''}
+    </div>`;
+  });
+  if(adm){
+    h+=`<div class="divider"></div>
+    <button class="btn btn-d btn-full" onclick="delObj('${id}')">🗑 Excluir este Objetivo e seus Indicadores</button>`;
+  }
+  h+=`</div>`;
+  showModal(h);
+}
+
+function openNovoObj(pId=''){
+  if(CU.role!=='admin'){notify('Apenas administradores.','err');return;}
+  pId=pId||D.perspectivas[0]?.id||'';
+  let h=`<div class="modal-hd"><div class="modal-title">Novo Objetivo Estratégico</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Perspectiva</label>
+      <select class="fsel" id="fp">${D.perspectivas.map(p=>`<option value="${p.id}"${p.id===pId?' selected':''}>${p.name}</option>`).join('')}</select>
+    </div>
+    <div class="fg"><label class="fl">Nome do objetivo</label><input class="fi" id="fon" placeholder="Ex: Aumentar satisfação do cliente"></div>
+    <div class="fg"><label class="fl">Responsável</label><input class="fi" id="for2" placeholder="Nome do responsável"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveObj()">Salvar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`;
+  showModal(h);
+}
+async function saveObj(){
+  const pId=g('fp').value,n=g('fon').value.trim(),r=g('for2').value.trim();
+  if(!n||!r){notify('Preencha todos os campos.','err');return;}
+  if(D.objetivos.filter(o=>o.pId===pId).length>=8){notify('Limite de 8 objetivos por perspectiva.','err');return;}
+  const {error}=await SB.from('objetivos').insert({perspectiva_id:pId,nome:n,responsavel:r});
+  if(error){notify('Erro: '+error.message,'err');return;}
+  cModal();notify('Objetivo adicionado!');await loadAllAndLog();rMapa();
+}
+async function delObj(id){
+  if(!confirm('Excluir este objetivo e todos os seus indicadores?'))return;
+  const {error}=await SB.from('objetivos').delete().eq('id',id);
+  if(error){notify('Erro ao excluir.','err');return;}
+  cModal();notify('Objetivo excluído.');await loadAllAndLog();rMapa();
+}
+
+function openNovoInd(oId){
+  let h=`<div class="modal-hd"><div class="modal-title">Novo Indicador</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome</label><input class="fi" id="fin" placeholder="Ex: NPS de clientes"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Tipo</label><input class="fi" id="fit" placeholder="%, Qtd, R$..."></div>
+      <div class="fg"><label class="fl">Meta</label><input class="fi" id="fim" type="number" placeholder="100"></div>
+    </div>
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="fid" placeholder="Descreva o indicador"></div>
+    <div class="fg"><label class="fl">Responsável</label><input class="fi" id="fir" placeholder="Nome"></div>
+    <div class="fg">
+      <div class="range-row"><label class="fl" style="margin:0">Resultado atual</label><span class="range-val" id="firv">50%</span></div>
+      <input type="range" min="0" max="100" step="1" value="50" id="firng" oninput="g('firv').textContent=this.value+'%'">
+    </div>
+    <input type="hidden" id="fioId" value="${oId}">
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveInd()">Salvar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`;
+  showModal(h);
+}
+async function saveInd(){
+  const oId=g('fioId').value,n=g('fin').value.trim(),t=g('fit').value.trim();
+  const desc=g('fid').value.trim(),meta=parseFloat(g('fim').value)||0;
+  const resp=g('fir').value.trim(),res=parseInt(g('firng').value);
+  if(!n||!t){notify('Preencha nome e tipo.','err');return;}
+  if(D.indicadores.filter(i=>i.oId===oId).length>=3){notify('Limite de 3 indicadores por objetivo.','err');return;}
+  const {error}=await SB.from('indicadores').insert({objetivo_id:oId,nome:n,tipo:t,descricao:desc,meta,responsavel:resp,resultado:res});
+  if(error){notify('Erro: '+error.message,'err');return;}
+  cModal();notify('Indicador adicionado!');await loadAllAndLog();rMapa();
+}
+function editInd(id){
+  const ind=D.indicadores.find(i=>i.id===id);
+  let h=`<div class="modal-hd"><div class="modal-title">Editar Indicador</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome</label><input class="fi" id="ein" value="${ind.nome}"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">Tipo</label><input class="fi" id="eit" value="${ind.tipo}" placeholder="%, Qtd, R$..."></div>
+      <div class="fg"><label class="fl">Meta</label><input class="fi" id="eim" type="number" value="${ind.meta}" placeholder="100"></div>
+    </div>
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="eid" value="${ind.desc}" placeholder="Descreva o indicador"></div>
+    <div class="fg"><label class="fl">Responsável</label><input class="fi" id="eir" value="${ind.resp}"></div>
+    <div class="fg">
+      <div class="range-row"><label class="fl" style="margin:0">Resultado atual</label><span class="range-val" id="eirv">${ind.res}%</span></div>
+      <input type="range" min="0" max="100" step="1" value="${ind.res}" id="eirng" oninput="g('eirv').textContent=this.value+'%'">
+    </div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="updInd('${id}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`;
+  showModal(h);
+}
+async function updInd(id){
+  const {error}=await SB.from('indicadores').update({
+    nome:        g('ein').value.trim(),
+    tipo:        g('eit').value.trim(),
+    meta:        parseFloat(g('eim').value)||0,
+    descricao:   g('eid').value.trim(),
+    responsavel: g('eir').value.trim(),
+    resultado:   parseInt(g('eirng').value)
+  }).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Indicador atualizado!');await loadAllAndLog();rMapa();
+}
+async function delInd(id,oId){
+  if(!confirm('Remover este indicador?'))return;
+  const {error}=await SB.from('indicadores').delete().eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify('Indicador removido.');await loadAllAndLog();openObj(oId);
+}
+
+// ── DIRETRIZES ANUAIS ─────────────────────
+async function rDir(){
+  loading('Carregando Diretrizes...');
+  const {data:metas} = await SB.from('diretrizes_metas').select('*').order('created_at');
+  const {data:inics} = await SB.from('diretrizes_iniciativas').select('*').order('created_at');
+  const adm = CU.role==='admin';
+  const total = (metas||[]).length;
+  const geral = total ? Math.round((metas||[]).reduce((s,m)=>s+Number(m.resultado||0),0)/total) : 0;
+  const concluidas = (metas||[]).filter(m=>Number(m.resultado)>=80).length;
+  const emAlerta   = (metas||[]).filter(m=>Number(m.resultado)<60).length;
+  // % de metas concluídas sobre o total cadastrado — usado para o badge
+  const pctConcluidas = total ? Math.round(concluidas/total*100) : 0;
+
+  let h=`<div class="page-hdr">
+    <div><div class="page-title">Diretrizes Anuais</div><div class="page-sub">Metas estratégicas e iniciativas do período</div></div>
+    ${adm&&total<10?`<button class="btn btn-p" onclick="openNovaMeta()">+ Nova Meta</button>`:''}
+  </div>
+  <div class="grid4 mb2">
+    ${met('Performance Geral',geral+'%',badge(geral))}
+    ${met('Metas Cadastradas',total+'/10','<span class="chip">total</span>')}
+    ${met('Concluídas',concluidas+' ('+pctConcluidas+'%)',badge(pctConcluidas))}
+    ${met('Em Alerta',emAlerta+' de '+total,'<span class="badge '+(emAlerta>0?'b-R':'b-G')+'">'+(emAlerta>0?'Atenção':'OK')+'</span>')}
+  </div>`;
+
+  if(!total){
+    h+=`<div class="card" style="text-align:center;padding:40px;color:var(--text3)">
+      <div style="font-size:32px;margin-bottom:8px">◉</div>
+      <div style="font-size:14px">Nenhuma meta cadastrada ainda.</div>
+      ${adm?`<button class="btn btn-p" style="margin-top:16px" onclick="openNovaMeta()">+ Cadastrar primeira meta</button>`:''}
+    </div>`;
+  } else {
+    (metas||[]).forEach(m=>{
+      const res=Number(m.resultado)||0;
+      const c=gc(res);
+      const minics=(inics||[]).filter(i=>i.meta_id===m.id);
+      const done=minics.filter(i=>i.finalizado).length;
+      h+=`<div class="card" style="border-top:3px solid ${ghx(res)};margin-bottom:14px">
+        <div class="flex ic jb mb2">
+          <div style="flex:1;min-width:0;margin-right:12px">
+            <div style="font-size:15px;font-weight:700;color:#000">${m.objetivo}</div>
+            <div class="flex ic gap3 mt1" style="flex-wrap:wrap">
+              ${m.valor?`<span class="chip">💰 ${m.valor}</span>`:''}
+              ${m.prazo?`<span class="chip">📅 ${m.prazo}</span>`:''}
+            </div>
+          </div>
+          <div class="flex ic gap2">
+            <span style="font-family:var(--font-d);font-size:24px;font-weight:800;color:${ghx(res)}">${res}%</span>
+            ${badge(res)}
+            ${adm?`<button class="btn btn-sm" style="padding:5px 9px;min-height:unset;font-size:12px" onclick="editMeta('${m.id}')">✎</button>`:''}
+            ${adm?`<button class="btn btn-d btn-sm" style="padding:5px 9px;min-height:unset;font-size:12px" onclick="delMeta('${m.id}')">🗑</button>`:''}
+          </div>
+        </div>
+        ${pbar(res,8)}
+        <div class="flex ic jb mt3 mb2">
+          <span style="font-size:12px;font-weight:600;color:var(--text2)">Iniciativas (${minics.length}/10) · ${done} finalizada(s)</span>
+          ${adm&&minics.length<10?`<button class="btn btn-p btn-sm" onclick="openNovaIniciativa('${m.id}')">+ Iniciativa</button>`:''}
+        </div>
+        ${minics.length===0?`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma iniciativa cadastrada.</div>`:''}
+        ${minics.map(i=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--border)">
+            <div class="mcheck ${i.finalizado?'done':''}" onclick="${adm?`togIniciativa('${i.id}',${!i.finalizado},'${m.id}')`:''}" style="cursor:${adm?'pointer':'default'}">
+              ${i.finalizado?'✓':''}
+            </div>
+            <span style="flex:1;font-size:13px;${i.finalizado?'text-decoration:line-through;color:var(--text3)':'color:#000'}">${i.nome}</span>
+            <span class="badge ${i.finalizado?'b-G':'b-R'}">${i.finalizado?'Finalizado':'Pendente'}</span>
+            ${adm?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editIniciativa('${i.id}','${m.id}')">✎</button>`:''}
+            ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delIniciativa('${i.id}','${m.id}')">🗑</button>`:''}
+          </div>`).join('')}
+      </div>`;
+    });
+  }
+  h+=leg();
+  setPage(h);
+}
+
+function openNovaMeta(){
+  showModal(`<div class="modal-hd"><div class="modal-title">Nova Meta</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Objetivo</label><input class="fi" id="dm-obj" placeholder="Ex: Aumentar faturamento em 20%"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">💰 Valor</label><input class="fi" id="dm-val" placeholder="Ex: R$ 1.200.000"></div>
+      <div class="fg"><label class="fl">📅 Prazo</label><input class="fi" id="dm-prazo" placeholder="Ex: Dez/2025"></div>
+    </div>
+    <div class="fg">
+      <div class="range-row"><label class="fl" style="margin:0">Resultado Atual</label><span class="range-val" id="dm-resv">0%</span></div>
+      <input type="range" min="0" max="100" step="1" value="0" id="dm-res" oninput="g('dm-resv').textContent=this.value+'%'">
+    </div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveMeta()">Salvar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveMeta(){
+  const obj=g('dm-obj').value.trim();
+  if(!obj){notify('Informe o objetivo.','err');return;}
+  const {data:all}=await SB.from('diretrizes_metas').select('id');
+  if((all||[]).length>=10){notify('Limite de 10 metas atingido.','err');return;}
+  const {error}=await SB.from('diretrizes_metas').insert({
+    objetivo:obj, valor:g('dm-val').value.trim(), prazo:g('dm-prazo').value.trim(),
+    resultado:parseInt(g('dm-res').value)
+  });
+  if(error){notify('Erro: '+error.message,'err');return;}
+  cModal();notify('Meta cadastrada!');registrarUpdate();rDir();
+}
+
+function editMeta(id){
+  SB.from('diretrizes_metas').select('*').eq('id',id).single().then(({data:m})=>{
+    if(!m)return;
+    showModal(`<div class="modal-hd"><div class="modal-title">Editar Meta</div><button class="mclose" onclick="cModal()">×</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label class="fl">Objetivo</label><input class="fi" id="em-obj" value="${m.objetivo}"></div>
+      <div class="frow">
+        <div class="fg"><label class="fl">💰 Valor</label><input class="fi" id="em-val" value="${m.valor||''}"></div>
+        <div class="fg"><label class="fl">📅 Prazo</label><input class="fi" id="em-prazo" value="${m.prazo||''}"></div>
+      </div>
+      <div class="fg">
+        <div class="range-row"><label class="fl" style="margin:0">Resultado Atual</label><span class="range-val" id="em-resv">${m.resultado}%</span></div>
+        <input type="range" min="0" max="100" step="1" value="${m.resultado}" id="em-res" oninput="g('em-resv').textContent=this.value+'%'">
+      </div>
+      <div class="btn-row"><button class="btn btn-p btn-full" onclick="updMeta('${id}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+    </div>`);
+  });
+}
+async function updMeta(id){
+  const {error}=await SB.from('diretrizes_metas').update({
+    objetivo:g('em-obj').value.trim(), valor:g('em-val').value.trim(),
+    prazo:g('em-prazo').value.trim(), resultado:parseInt(g('em-res').value),
+    updated_at:new Date().toISOString()
+  }).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Meta atualizada!');registrarUpdate();rDir();
+}
+async function delMeta(id){
+  if(!confirm('Excluir esta meta e todas as suas iniciativas?'))return;
+  const {error}=await SB.from('diretrizes_metas').delete().eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify('Meta excluída.');registrarUpdate();rDir();
+}
+
+function openNovaIniciativa(metaId){
+  showModal(`<div class="modal-hd"><div class="modal-title">Nova Iniciativa</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição da Iniciativa</label><input class="fi" id="di-nm" placeholder="Ex: Lançar campanha de vendas Q2"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveIniciativa('${metaId}')">Adicionar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveIniciativa(metaId){
+  const n=g('di-nm').value.trim();
+  if(!n){notify('Informe a iniciativa.','err');return;}
+  const {data:all}=await SB.from('diretrizes_iniciativas').select('id').eq('meta_id',metaId);
+  if((all||[]).length>=10){notify('Limite de 10 iniciativas por meta.','err');return;}
+  const {error}=await SB.from('diretrizes_iniciativas').insert({meta_id:metaId,nome:n});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Iniciativa adicionada!');registrarUpdate();rDir();
+}
+
+function editIniciativa(id, metaId){
+  SB.from('diretrizes_iniciativas').select('*').eq('id',id).single().then(({data:i})=>{
+    if(!i)return;
+    showModal(`<div class="modal-hd"><div class="modal-title">Editar Iniciativa</div><button class="mclose" onclick="cModal()">×</button></div>
+    <div class="modal-bd">
+      <div class="fg"><label class="fl">Descrição</label><input class="fi" id="ei-nm" value="${i.nome}"></div>
+      <div class="btn-row"><button class="btn btn-p btn-full" onclick="updIniciativa('${id}','${metaId}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+    </div>`);
+  });
+}
+async function updIniciativa(id, metaId){
+  const n=g('ei-nm').value.trim();
+  if(!n){notify('Informe a descrição.','err');return;}
+  const {error}=await SB.from('diretrizes_iniciativas').update({nome:n}).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Iniciativa atualizada!');registrarUpdate();rDir();
+}
+async function togIniciativa(id, novoStatus, metaId){
+  const {error}=await SB.from('diretrizes_iniciativas').update({finalizado:novoStatus}).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify(novoStatus?'Iniciativa finalizada!':'Iniciativa reaberta.');
+  registrarUpdate();
+  rDir();
+}
+async function delIniciativa(id, metaId){
+  if(!confirm('Excluir esta iniciativa?'))return;
+  const {error}=await SB.from('diretrizes_iniciativas').delete().eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify('Iniciativa excluída.');registrarUpdate();rDir();
+}
+
+// Usuário pode editar se for admin OU se for usuário da unidade em questão
+function podeEditar(unidadeId){
+  if(CU.role==='admin') return true;
+  if(CU.unidadeId && unidadeId && CU.unidadeId===unidadeId) return true;
+  return false;
+}
+function podeEditarKR(krId){
+  if(CU.role==='admin') return true;
+  const kr  = D.krs.find(k=>k.id===krId);
+  if(!kr) return false;
+  const okr = D.okrs.find(o=>o.id===kr.okId);
+  if(!okr) return false;
+  const resp = D.responsaveis.find(r=>r.id===okr.rId);
+  if(!resp) return false;
+  return CU.unidadeId===resp.uId;
+}
+function rOKR(){
+  const adm=CU.role==='admin';
+  // Filtrar unidades visíveis: admin vê todas, usuário vê só a sua
+  const unidadesVisiveis = adm
+    ? D.unidades
+    : D.unidades.filter(u=>u.id===CU.unidadeId);
+
+  const geral=avg(D.krs.map(k=>k.p));
+  let h=`<div class="page-hdr">
+    <div><div class="page-title">OKR — Metas</div><div class="page-sub">${adm?'Desdobramento por unidade organizacional':'Sua unidade: <b>'+( D.unidades.find(u=>u.id===CU.unidadeId)?.name||'—')+'</b>'}</div></div>
+    ${adm?`<button class="btn btn-p" onclick="openNovaUnit()">+ Unidade</button>`:''}
+  </div>
+  <div class="grid4 mb2">
+    ${met('Performance Geral',geral+'%',badge(geral))}
+    ${met('Unidades',D.unidades.length,'<span class="chip">cadastradas</span>')}
+    ${met('Objetivos OKR',D.okrs.length,'<span class="chip">ativos</span>')}
+    ${met('Resultados-Chave',D.krs.length,'<span class="chip">mapeados</span>')}
+  </div>`;
+  unidadesVisiveis.forEach(u=>{
+    const us=uScore(u.id); const resps=D.responsaveis.filter(r=>r.uId===u.id);
+    const pe=podeEditar(u.id);
+    h+=`<div class="okr-unit">
+      <div class="okr-u-hd" onclick="tog('ou-${u.id}')">
+        <div><div class="okr-u-nm">${u.name}</div><div style="font-size:11px;color:var(--text3)">${resps.length} responsável(is)</div></div>
+        <div class="flex ic gap2">
+          <span style="font-family:var(--font-d);font-size:18px;font-weight:800;color:${ghx(us)}">${us}%</span>
+          ${badge(us)}
+          <button class="btn btn-sm" style="padding:5px 10px;min-height:unset;font-size:12px;border-color:#7c3aed;color:#7c3aed" onclick="event.stopPropagation();openDiario('${u.id}','${u.name}')">📒 Diário</button>
+          <button class="btn btn-sm" style="padding:5px 10px;min-height:unset;font-size:12px;border-color:#b45309;color:#b45309" onclick="event.stopPropagation();openRanLista('${u.id}','${u.name}')">📋 RAN</button>
+          ${pe?`<button class="btn btn-p btn-sm" onclick="event.stopPropagation();openNovoResp('${u.id}')">+Resp</button>`:''}
+          ${adm?`<button class="btn btn-d btn-sm" onclick="event.stopPropagation();delUnit('${u.id}')" title="Excluir unidade">🗑</button>`:''}
+        </div>
+      </div>
+      <div id="ou-${u.id}" style="display:none" class="okr-body">
+        ${resps.map(r=>{
+          const rs=rScore(r.id); const okrs=D.okrs.filter(o=>o.rId===r.id);
+          return `<div class="okr-resp" onclick="tog('or-${r.id}')">
+            <div><div class="okr-resp-nm">${r.name}</div><div style="font-size:11px;color:var(--text3)">${okrs.length} objetivo(s)</div></div>
+            <div class="flex ic gap2">
+              <span style="font-weight:700;color:${ghx(rs)}">${rs}%</span>${badge(rs)}
+              ${pe?`<button class="btn btn-p btn-sm" onclick="event.stopPropagation();openNovoOKR('${r.id}')">+Obj</button>`:''}
+              ${adm?`<button class="btn btn-d btn-sm" onclick="event.stopPropagation();delResp('${r.id}')" title="Excluir responsável">🗑</button>`:''}
+            </div>
+          </div>
+          <div id="or-${r.id}" style="display:none">
+            ${okrs.map(ok=>{
+              const oks=okScore(ok.id); const krs=D.krs.filter(k=>k.okId===ok.id);
+              return `<div class="okr-obj">
+                <span class="okr-obj-nm">${ok.name}</span>
+                <div class="flex ic gap2">
+                  <span style="font-weight:700;color:${ghx(oks)};font-size:13px">${oks}%</span>${badge(oks)}
+                  ${pe?`<button class="btn btn-p btn-sm" onclick="openNovoKR('${ok.id}')">+KR</button>`:''}
+                  ${pe?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editOKR('${ok.id}')">✎</button>`:''}
+                  ${adm?`<button class="btn btn-d btn-sm" onclick="delOKR('${ok.id}')" title="Excluir objetivo">🗑</button>`:''}
+                </div>
+              </div>
+              ${krs.map(kr=>`
+                <div class="okr-kr" style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:var(--r);margin:4px 0 4px 26px;padding:7px 10px">
+                  <div style="width:100%;margin-bottom:4px">
+                    <div class="flex ic jb">
+                      <span class="okr-kr-nm" style="color:var(--text);font-weight:500">${kr.name}</span>
+                      <span style="font-size:12px;font-weight:700;color:${ghx(kr.p)};flex-shrink:0">${kr.p}%</span>
+                    </div>
+                    ${kr.data_inicio||kr.data_fim?`<div style="font-size:10px;color:var(--text3);margin-top:2px">📅 ${kr.data_inicio?new Date(kr.data_inicio+'T12:00:00').toLocaleDateString('pt-BR'):'—'} até ${kr.data_fim?new Date(kr.data_fim+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div>`:''}
+                    <div class="kr-bar" style="margin-top:5px"><div class="kr-fill" style="width:${kr.p}%;background:${ghx(kr.p)}"></div></div>
+                  </div>
+                  <div class="flex ic gap2" style="flex-wrap:wrap">
+                    <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px;border-color:var(--Gb);color:var(--G)" onclick="openPlanoAcao('${kr.id}','${kr.name.replace(/'/g,'')}')">📋</button>
+                    <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:13px;border-color:var(--Bb);color:var(--acc)" onclick="openComentarios('${kr.id}','${kr.name.replace(/'/g,'')}')">💬</button>
+                    ${pe?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editKR('${kr.id}')">✎</button>`:''}
+                    ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delKR('${kr.id}')" title="Excluir KR">🗑</button>`:''}
+                  </div>
+                </div>`).join('')}`;
+            }).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  h+=leg();
+  setPage(h);
+  // Expandir automaticamente a unidade do usuário logado
+  if(CU.role!=='admin' && CU.unidadeId){
+    setTimeout(()=>{
+      const el = g('ou-'+CU.unidadeId);
+      if(el) el.style.display='block';
+    }, 150);
+  }
+}
+
+function tog(id){ const el=g(id); if(el) el.style.display=el.style.display==='none'?'block':'none'; }
+
+function openNovaUnit(){
+  showModal(`<div class="modal-hd"><div class="modal-title">Nova Unidade</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome</label><input class="fi" id="fun" placeholder="Ex: Comercial, TI, RH"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveUnit()">Criar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveUnit(){
+  const n=g('fun').value.trim(); if(!n){notify('Informe o nome.','err');return;}
+  const {error}=await SB.from('unidades').insert({nome:n});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Unidade criada!');await loadAllAndLog();rOKR();
+}
+async function delUnit(id){
+  if(!confirm('Excluir esta unidade e todos os dados vinculados?'))return;
+  const {error}=await SB.from('unidades').delete().eq('id',id);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Unidade excluída.');await loadAllAndLog();rOKR();
+}
+async function delResp(id){
+  if(!confirm('Excluir este responsável e todos os seus objetivos e KRs?'))return;
+  const {error}=await SB.from('responsaveis').delete().eq('id',id);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Responsável excluído.');await loadAllAndLog();rOKR();
+}
+async function delOKR(id){
+  if(!confirm('Excluir este objetivo e todos os seus resultados-chave?'))return;
+  const {error}=await SB.from('objetivos_okr').delete().eq('id',id);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Objetivo OKR excluído.');await loadAllAndLog();rOKR();
+}
+async function delKR(id){
+  if(!confirm('Excluir este resultado-chave?'))return;
+  const {error}=await SB.from('resultados_chave').delete().eq('id',id);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Resultado-Chave excluído.');await loadAllAndLog();rOKR();
+}
+
+function openNovoResp(uId){
+  if(D.responsaveis.filter(r=>r.uId===uId).length>=10){notify('Limite de 10 responsáveis.','err');return;}
+  const u=D.unidades.find(x=>x.id===uId);
+  showModal(`<div class="modal-hd"><div><div class="modal-title">Novo Responsável</div><div class="modal-sub">${u.name}</div></div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome completo</label><input class="fi" id="frn" placeholder="Nome"></div>
+    <input type="hidden" id="fru" value="${uId}">
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveResp()">Adicionar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveResp(){
+  const uId=g('fru').value,n=g('frn').value.trim(); if(!n){notify('Informe o nome.','err');return;}
+  const {error}=await SB.from('responsaveis').insert({unidade_id:uId,nome:n});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Responsável adicionado!');await loadAllAndLog();rOKR();
+}
+
+function openNovoOKR(rId){
+  if(D.okrs.filter(o=>o.rId===rId).length>=5){notify('Limite de 5 objetivos.','err');return;}
+  const r=D.responsaveis.find(x=>x.id===rId);
+  showModal(`<div class="modal-hd"><div><div class="modal-title">Novo Objetivo OKR</div><div class="modal-sub">${r.name}</div></div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Objetivo</label><input class="fi" id="fokn" placeholder="Ex: Aumentar fidelização"></div>
+    <input type="hidden" id="fokr" value="${rId}">
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveOKR()">Adicionar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveOKR(){
+  const rId=g('fokr').value,n=g('fokn').value.trim(); if(!n){notify('Informe o objetivo.','err');return;}
+  const {error}=await SB.from('objetivos_okr').insert({responsavel_id:rId,nome:n});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Objetivo adicionado!');await loadAllAndLog();rOKR();
+}
+
+function openNovoKR(okId){
+  if(D.krs.filter(k=>k.okId===okId).length>=6){notify('Limite de 6 resultados-chave.','err');return;}
+  showModal(`<div class="modal-hd"><div class="modal-title">Novo Resultado-Chave</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="fkrn" placeholder="Ex: Atingir NPS > 80"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">📅 Data Início</label><input class="fi" id="fkr-di" type="date"></div>
+      <div class="fg"><label class="fl">📅 Data Fim</label><input class="fi" id="fkr-df" type="date"></div>
+    </div>
+    <div class="fg">
+      <div class="range-row"><label class="fl" style="margin:0">Progresso inicial</label><span class="range-val" id="fkrv">0%</span></div>
+      <input type="range" min="0" max="100" step="1" value="0" id="fkrng" oninput="g('fkrv').textContent=this.value+'%'">
+    </div>
+    <input type="hidden" id="fkroid" value="${okId}">
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveKR()">Salvar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveKR(){
+  const okId=g('fkroid').value,n=g('fkrn').value.trim(),p=parseInt(g('fkrng').value);
+  const di=g('fkr-di').value||null, df=g('fkr-df').value||null;
+  if(!n){notify('Informe o resultado.','err');return;}
+  const {error}=await SB.from('resultados_chave').insert({objetivo_okr_id:okId,nome:n,progresso:p,data_inicio:di,data_fim:df});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Resultado-Chave adicionado!');await loadAllAndLog();rOKR();
+}
+function editKR(id){
+  const kr=D.krs.find(k=>k.id===id);
+  showModal(`<div class="modal-hd"><div class="modal-title">Editar Resultado-Chave</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="ekrn" value="${kr.name}"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">📅 Data Início</label><input class="fi" id="ekr-di" type="date" value="${kr.data_inicio||''}"></div>
+      <div class="fg"><label class="fl">📅 Data Fim</label><input class="fi" id="ekr-df" type="date" value="${kr.data_fim||''}"></div>
+    </div>
+    <div class="fg">
+      <div class="range-row"><label class="fl" style="margin:0">Progresso</label><span class="range-val" id="ekrv">${kr.p}%</span></div>
+      <input type="range" min="0" max="100" step="1" value="${kr.p}" id="ekrng" oninput="g('ekrv').textContent=this.value+'%'">
+    </div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="updKR('${id}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function updKR(id){
+  const di=g('ekr-di').value||null, df=g('ekr-df').value||null;
+  const {error}=await SB.from('resultados_chave').update({
+    nome:g('ekrn').value.trim(),
+    progresso:parseInt(g('ekrng').value),
+    data_inicio:di,
+    data_fim:df
+  }).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Resultado-Chave atualizado!');await loadAllAndLog();rOKR();
+}
+
+function editOKR(id){
+  const ok=D.okrs.find(o=>o.id===id);
+  showModal(`<div class="modal-hd"><div class="modal-title">Editar Objetivo OKR</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome do Objetivo</label><input class="fi" id="eokn" value="${ok.name}"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="updOKR('${id}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function updOKR(id){
+  const n=g('eokn').value.trim();
+  if(!n){notify('Informe o objetivo.','err');return;}
+  const {error}=await SB.from('objetivos_okr').update({nome:n}).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Objetivo atualizado!');await loadAllAndLog();rOKR();
+}
+
+// ── PROJETOS ──────────────────────────────
+function rProj(){
+  const adm=CU.role==='admin';
+  const gav=avg(D.projetos.map(p=>ppct(p)));
+  let h=`<div class="page-hdr">
+    <div><div class="page-title">Projetos Especiais</div><div class="page-sub">${D.projetos.length}/15 projetos ativos</div></div>
+    ${adm&&D.projetos.length<15?`<button class="btn btn-p" onclick="openNovoProj()">+ Projeto</button>`:''}
+  </div>
+  <div class="grid4 mb2">
+    ${met('Progresso Geral',gav+'%',badge(gav))}
+    ${met('Projetos',`${D.projetos.length}/15`,'<span class="chip">capacidade</span>')}
+    ${met('Em Destaque',D.projetos.filter(p=>ppct(p)>=80).length,badge(85))}
+    ${met('Atenção',D.projetos.filter(p=>ppct(p)<60).length,badge(35))}
+  </div>`;
+  D.projetos.forEach(p=>{
+    const pc=ppct(p),c=gc(pc),done=p.marcos.filter(m=>m.done).length;
+    h+=`<div class="proj-card bg-${c}" style="border-top:3px solid var(--acc);background:var(--bg2)" onclick="openProj('${p.id}')">
+      <div class="flex ic jb mb2">
+        <div><div class="proj-nm" style="color:var(--text)">${p.name}</div><div class="proj-meta">${done}/${p.marcos.length} marcos concluídos</div></div>
+        <span class="proj-score c-${c}">${pc}%</span>
+      </div>
+      ${pbar(pc,7)}
+      <div class="mt2">${badge(pc)}</div>
+    </div>`;
+  });
+  h+=leg();
+  setPage(h);
+}
+
+function openProj(id){
+  const p=D.projetos.find(x=>x.id===id),pc=ppct(p),adm=CU.role==='admin';
+  const done=p.marcos.filter(m=>m.done).length;
+  let h=`<div class="modal-hd">
+    <div><div class="modal-title">${p.name}</div><div class="modal-sub">${done}/${p.marcos.length} marcos &middot; <b style="color:${ghx(pc)}">${pc}%</b></div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd">
+    ${pbar(pc,9)}
+    <div class="flex ic jb mt3 mb2">
+      <span style="font-weight:600">Marcos (${p.marcos.length}/20)</span>
+      ${adm&&p.marcos.length<20?`<button class="btn btn-p btn-sm" onclick="openNovoMarco('${id}')">+ Marco</button>`:''}
+    </div>`;
+  p.marcos.forEach(m=>{
+    h+=`<div class="mstone">
+      <div class="mcheck ${m.done?'done':''}" onclick="${adm?`togM('${id}','${m.id}',${!m.done})`:''}">
+        ${m.done?'✓':''}
+      </div>
+      <span class="mstone-nm ${m.done?'done':''}">${m.name}</span>
+      <span class="badge ${m.done?'b-G':'b-R'}">${m.done?'Feito':'Pendente'}</span>
+      ${adm?`<button class="btn btn-d btn-sm" style="margin-left:8px;padding:4px 8px;min-height:unset;font-size:11px" onclick="delMarco('${id}','${m.id}')" title="Excluir marco">🗑</button>`:''}
+    </div>`;
+  });
+  if(adm){
+    h+=`<div class="divider"></div>
+    <button class="btn btn-d btn-full" onclick="delProj('${id}')">🗑 Excluir Projeto</button>`;
+  }
+  h+=`</div>`;
+  showModal(h);
+}
+
+async function togM(pId,mId,novoStatus){
+  const {error}=await SB.from('marcos').update({finalizado:novoStatus}).eq('id',mId);
+  if(error){notify('Erro.','err');return;}
+  notify(novoStatus?'Marco finalizado!':'Marco reaberto.');
+  registrarUpdate();
+  await loadAllAndLog(); openProj(pId); rProj();
+}
+async function delMarco(pId,mId){
+  if(!confirm('Excluir este marco?'))return;
+  const {error}=await SB.from('marcos').delete().eq('id',mId);
+  if(error){notify('Erro ao excluir marco.','err');return;}
+  notify('Marco excluído.');
+  registrarUpdate();
+  await loadAllAndLog(); openProj(pId); rProj();
+}
+function openNovoProj(){
+  showModal(`<div class="modal-hd"><div class="modal-title">Novo Projeto Especial</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome do projeto</label><input class="fi" id="fpn" placeholder="Ex: Transformação Digital"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveProj()">Criar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveProj(){
+  const n=g('fpn').value.trim(); if(!n){notify('Informe o nome.','err');return;}
+  if(D.projetos.length>=15){notify('Limite de 15 projetos.','err');return;}
+  const {error}=await SB.from('projetos').insert({nome:n});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Projeto criado!');await loadAllAndLog();rProj();
+}
+async function delProj(id){
+  if(!confirm('Excluir este projeto e todos os marcos?'))return;
+  const {error}=await SB.from('projetos').delete().eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Projeto excluído.');await loadAllAndLog();rProj();
+}
+function openNovoMarco(pId){
+  showModal(`<div class="modal-hd"><div class="modal-title">Novo Marco</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="fmn" placeholder="Ex: Entrega do módulo X"></div>
+    <input type="hidden" id="fmpid" value="${pId}">
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveMarco()">Adicionar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+async function saveMarco(){
+  const pId=g('fmpid').value,p=D.projetos.find(x=>x.id===pId),n=g('fmn').value.trim();
+  if(!n){notify('Informe o marco.','err');return;}
+  if(p.marcos.length>=20){notify('Limite de 20 marcos.','err');return;}
+  const {error}=await SB.from('marcos').insert({projeto_id:pId,nome:n,finalizado:false});
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Marco adicionado!');await loadAllAndLog();openProj(pId);rProj();
+}
+
+// ── ADMIN ─────────────────────────────────
+async function rAdm(){
+  if(CU.role!=='admin'){go('dash');return;}
+  const {data:perfis}=await SB.from('perfis').select('*').order('created_at');
+  const {data:units}=await SB.from('unidades').select('*').order('nome');
+  const getUnit = (uid) => (units||[]).find(u=>u.id===uid)?.nome||'—';
+  let h=`<div class="page-hdr">
+    <div><div class="page-title">Configurações</div><div class="page-sub">Gestão de usuários e resumo do sistema</div></div>
+    <button class="btn btn-p" onclick="openNovoUsuario()">+ Novo Usuário</button>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-title">Usuários cadastrados (${(perfis||[]).length})</div>
+    ${(perfis||[]).length===0?`<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Nenhum usuário cadastrado</div>`:''}
+    ${(perfis||[]).map(u=>`
+      <div class="flex ic gap3" style="padding:12px 0;border-bottom:1px solid var(--border)">
+        <div class="avatar" style="flex-shrink:0;font-size:14px">${(u.nome||'U')[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:600;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nome||'—'}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">
+            ${u.id===CU.id?'<b style="color:var(--acc)">Você</b> · ':''}
+            ${u.papel==='admin'?'Administrador':'Unidade: <b>'+getUnit(u.unidade_id)+'</b>'}
+            · ${new Date(u.created_at).toLocaleDateString('pt-BR')}
+          </div>
+        </div>
+        <span class="badge ${u.papel==='admin'?'b-B':'b-G'}" style="flex-shrink:0">${u.papel==='admin'?'Admin':'Usuário'}</span>
+        ${u.id!==CU.id?`
+        <div class="flex ic gap2">
+          <button class="btn btn-sm" style="padding:5px 10px;min-height:unset;font-size:11px" onclick="alterarPapel('${u.id}','${u.papel}','${u.nome||''}')">
+            ${u.papel==='admin'?'→ Usuário':'→ Admin'}
+          </button>
+          <button class="btn btn-d btn-sm" style="padding:5px 10px;min-height:unset;font-size:11px" onclick="removerUsuario('${u.id}','${u.nome||''}')">🗑</button>
+        </div>`:'<span style="font-size:11px;color:var(--text3);padding:0 4px">—</span>'}
+      </div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="card-title">Resumo do sistema</div>
+    ${[['Perspectivas',D.perspectivas.length],['Objetivos Estratégicos',D.objetivos.length],['Indicadores',D.indicadores.length],
+       ['Unidades OKR',D.unidades.length],['Responsáveis',D.responsaveis.length],['Objetivos OKR',D.okrs.length],
+       ['Resultados-Chave',D.krs.length],['Projetos Especiais',D.projetos.length]].map(([k,v])=>`
+      <div class="flex ic jb" style="padding:9px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;color:var(--text2)">${k}</span>
+        <span style="font-family:var(--font-d);font-size:16px;font-weight:700;color:#000">${v}</span>
+      </div>`).join('')}
+  </div>`;
+  setPage(h);
+}
+
+function openNovoUsuario(){
+  const unitsOpts = D.unidades.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">Novo Usuário</div><div class="modal-sub">Preencha os dados do novo usuário</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome completo</label><input class="fi" id="nu-nome" placeholder="Ex: João Silva"></div>
+    <div class="fg"><label class="fl">E-mail</label><input class="fi" id="nu-email" type="email" placeholder="joao@empresa.com"></div>
+    <div class="fg">
+      <label class="fl">Perfil de acesso</label>
+      <select class="fsel" id="nu-papel" onchange="toggleUnidade(this.value)">
+        <option value="user">Usuário — acesso à sua unidade</option>
+        <option value="admin">Administrador — acesso total</option>
+      </select>
+    </div>
+    <div id="nu-unidade-box" class="fg">
+      <label class="fl">Unidade Organizacional</label>
+      <select class="fsel" id="nu-unidade">
+        <option value="">— Selecione ou crie nova —</option>
+        ${unitsOpts}
+      </select>
+      <div style="margin-top:8px;font-size:12px;color:var(--text2)">Ou crie uma nova unidade:</div>
+      <input class="fi" id="nu-nova-unidade" placeholder="Nome da nova unidade" style="margin-top:6px">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">💡 A senha do usuário será o nome da unidade (letras minúsculas, sem espaços extras)</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" id="btn-criar-user" onclick="criarUsuario()">Criar Usuário</button>
+      <button class="btn btn-full" onclick="cModal()">Cancelar</button>
+    </div>
+  </div>`);
+}
+
+function toggleUnidade(papel){
+  const box = g('nu-unidade-box');
+  if(box) box.style.display = papel==='admin' ? 'none' : 'block';
+}
+
+async function criarUsuario(){
+  const nome   = g('nu-nome').value.trim();
+  const email  = g('nu-email').value.trim();
+  const papel  = g('nu-papel').value;
+  if(!nome||!email){notify('Preencha nome e e-mail.','err');return;}
+
+  let unidadeId   = null;
+  let unidadeNome = '';
+  let senha       = '';
+
+  if(papel === 'user'){
+    const novaUnit = g('nu-nova-unidade').value.trim();
+    const selUnit  = g('nu-unidade').value;
+
+    if(novaUnit){
+      // Criar nova unidade
+      const {data:uCriada, error:uErr} = await SB.from('unidades').insert({nome:novaUnit}).select().single();
+      if(uErr){notify('Erro ao criar unidade: '+uErr.message,'err');return;}
+      unidadeId   = uCriada.id;
+      unidadeNome = novaUnit;
+    } else if(selUnit){
+      unidadeId   = selUnit;
+      unidadeNome = D.unidades.find(u=>u.id===selUnit)?.name||selUnit;
+    } else {
+      notify('Selecione ou crie uma unidade para o usuário.','err');return;
+    }
+    // Senha = nome da unidade em minúsculas
+    senha = unidadeNome.toLowerCase().trim().replace(/\s+/g,'');
+    if(senha.length < 6) senha = senha.padEnd(6,'0');
+  } else {
+    const s = prompt('Defina a senha do administrador (mínimo 6 caracteres):');
+    if(!s||s.length<6){notify('Senha inválida. Mínimo 6 caracteres.','err');return;}
+    senha = s;
+  }
+
+  const btn=g('btn-criar-user'); btn.disabled=true; btn.textContent='Criando...';
+  try {
+    // 1. Criar usuário via signUp
+    const {data,error} = await SB.auth.signUp({email, password:senha, options:{data:{nome}}});
+    if(error){notify('Erro: '+error.message,'err');btn.disabled=false;btn.textContent='Criar Usuário';return;}
+
+    let userId = data?.user?.id;
+
+    // 2. Se não retornou id (usuário já existe ou pendente), buscar pelo email
+    if(!userId){
+      const {data:perfisExist} = await SB.from('perfis').select('id').eq('nome',email).limit(1);
+      if(perfisExist&&perfisExist.length>0) userId = perfisExist[0].id;
+    }
+
+    if(!userId){
+      notify('Erro: não foi possível obter o ID do usuário.','err');
+      btn.disabled=false; btn.textContent='Criar Usuário'; return;
+    }
+
+    // 3. Salvar perfil com unidade_id
+    const {error:perfErr} = await SB.from('perfis').upsert({
+      id:        userId,
+      nome:      nome,
+      papel:     papel,
+      unidade_id: unidadeId||null
+    },{onConflict:'id'});
+
+    if(perfErr){
+      notify('Usuário criado mas erro ao salvar perfil: '+perfErr.message,'err');
+    }
+
+    // 4. Confirmar email automaticamente
+    try { await SB.rpc('confirmar_usuario', {user_id:userId}); } catch(e){}
+
+    // 5. Se nova unidade foi criada, recarregar dados
+    await loadAll();
+
+    cModal();
+    notify(`✅ Usuário "${nome}" criado! Senha: "${senha}"`);
+    await rAdm();
+
+  } catch(e){
+    notify('Erro inesperado: '+e.message,'err');
+    btn.disabled=false; btn.textContent='Criar Usuário';
+  }
+}
+
+async function alterarPapel(userId, papelAtual, nome){
+  const novoPapel = papelAtual==='admin'?'user':'admin';
+  const label = novoPapel==='admin'?'Administrador':'Usuário';
+  if(!confirm(`Alterar perfil de "${nome}" para ${label}?`))return;
+  const {error}=await SB.from('perfis').update({papel:novoPapel}).eq('id',userId);
+  if(error){notify('Erro ao alterar perfil.','err');return;}
+  notify(`Perfil alterado para ${label}!`);
+  await rAdm();
+}
+
+async function removerUsuario(userId, nome){
+  if(!confirm(`Remover o usuário "${nome}"? Esta ação não pode ser desfeita.`))return;
+  const {error}=await SB.from('perfis').delete().eq('id',userId);
+  if(error){notify('Erro ao remover usuário.','err');return;}
+  notify('Usuário removido.');
+  await rAdm();
+}
+
+
+// ── PLANO DE AÇÃO ─────────────────────────
+async function openPlanoAcao(krId, krNome){
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">📋 Plano de Ação</div>
+    <div class="modal-sub" style="max-width:600px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${krNome}</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd-lg" id="pa-body">
+    <div class="loading"><div class="spin"></div>Carregando...</div>
+  </div>`, true);
+  await renderPlanoAcao(krId, krNome);
+}
+
+async function renderPlanoAcao(krId, krNome){
+  const {data:linhas} = await SB
+    .from('planos_acao')
+    .select('*')
+    .eq('resultado_chave_id', krId)
+    .order('ordem');
+
+  const adm = CU.role === 'admin';
+  const bd  = g('pa-body');
+  if(!bd) return;
+
+  const total = (linhas||[]).length;
+
+  let h = `<div class="flex ic jb mb2">
+    <span style="font-size:13px;font-weight:600;color:#000">${total} linha(s) de ${20}</span>
+    ${adm && total < 20 ? `<button class="btn btn-p btn-sm" onclick="openNovaLinhaPA('${krId}','${krNome.replace(/'/g,'')}')">+ Nova Linha</button>` : ''}
+  </div>`;
+
+  if(total === 0){
+    h += `<div style="text-align:center;padding:28px;color:var(--text3);font-size:13px">
+      Nenhuma linha cadastrada.<br>${adm?'Clique em "+ Nova Linha" para começar.':''}
+    </div>`;
+  } else {
+    // Cabeçalho da tabela
+    h += `<div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
+        <thead>
+          <tr style="background:var(--bg4)">
+            ${['#','O Que','Como','Por que','Onde','Quem','Quando','Quanto',''].map(col=>
+              `<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap">${col}</th>`
+            ).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${(linhas||[]).map((l,idx)=>`
+            <tr style="border-bottom:1px solid var(--border);${idx%2===0?'background:var(--bg2)':'background:var(--bg3)'}">
+              <td style="padding:9px 10px;color:var(--text3);font-weight:600;white-space:nowrap">${idx+1}</td>
+              <td style="padding:9px 10px;color:#000;font-weight:500;min-width:120px">${l.o_que||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);min-width:110px">${l.como||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);min-width:110px">${l.por_que||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);min-width:90px">${l.onde||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);min-width:90px">${l.quem||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);white-space:nowrap;min-width:90px">${l.quando||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);white-space:nowrap;min-width:90px">${l.quanto||'—'}</td>
+              <td style="padding:9px 10px;white-space:nowrap">
+                ${adm?`<div class="flex ic gap2">
+                  <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editarLinhaPA('${l.id}','${krId}','${krNome.replace(/'/g,'')}')">✎</button>
+                  <button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delLinhaPA('${l.id}','${krId}','${krNome.replace(/'/g,'')}')">🗑</button>
+                </div>`:''}
+              </td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+
+  bd.innerHTML = h;
+}
+
+function openNovaLinhaPA(krId, krNome){
+  const bd = g('pa-body');
+  if(!bd) return;
+  bd.innerHTML = `
+    <div style="margin-bottom:14px;font-size:13px;font-weight:600;color:#000">Nova linha do Plano de Ação</div>
+    ${formLinhaPA(krId, krNome, null)}`;
+}
+
+function formLinhaPA(krId, krNome, linha){
+  const v = campo => linha ? (linha[campo]||'') : '';
+  return `
+    <div class="frow">
+      <div class="fg"><label class="fl">🎯 O Que</label><textarea class="fi" id="pa-o_que" rows="2" placeholder="O que será feito?" style="resize:vertical;line-height:1.5">${v('o_que')}</textarea></div>
+      <div class="fg"><label class="fl">⚙ Como</label><textarea class="fi" id="pa-como" rows="2" placeholder="Como será executado?" style="resize:vertical;line-height:1.5">${v('como')}</textarea></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">💡 Por que</label><textarea class="fi" id="pa-por_que" rows="2" placeholder="Por que é necessário?" style="resize:vertical;line-height:1.5">${v('por_que')}</textarea></div>
+      <div class="fg"><label class="fl">📍 Onde</label><textarea class="fi" id="pa-onde" rows="2" placeholder="Onde será realizado?" style="resize:vertical;line-height:1.5">${v('onde')}</textarea></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label class="fl">👤 Quem</label><input class="fi" id="pa-quem" placeholder="Responsável" value="${v('quem')}"></div>
+      <div class="fg"><label class="fl">📅 Quando</label><input class="fi" id="pa-quando" placeholder="Ex: 30/06/2025" value="${v('quando')}"></div>
+    </div>
+    <div class="fg"><label class="fl">💰 Quanto</label><input class="fi" id="pa-quanto" placeholder="Custo ou recurso necessário" value="${v('quanto')}"></div>
+    <input type="hidden" id="pa-krid" value="${krId}">
+    <input type="hidden" id="pa-krnome" value="${krNome}">
+    ${linha ? `<input type="hidden" id="pa-lid" value="${linha.id}">` : ''}
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" onclick="${linha ? `atualizarLinhaPA('${linha.id}')` : 'salvarLinhaPA()'}">
+        ${linha ? 'Salvar Alterações' : 'Adicionar Linha'}
+      </button>
+      <button class="btn btn-full" onclick="renderPlanoAcao('${krId}','${krNome}')">Cancelar</button>
+    </div>`;
+}
+
+async function salvarLinhaPA(){
+  const krId   = g('pa-krid').value;
+  const krNome = g('pa-krnome').value;
+  if(!g('pa-o_que').value.trim()){notify('Preencha ao menos o campo "O Que".','err');return;}
+  const {data:existentes} = await SB.from('planos_acao').select('id').eq('resultado_chave_id',krId);
+  if((existentes||[]).length >= 20){notify('Limite de 20 linhas atingido.','err');return;}
+  const {error} = await SB.from('planos_acao').insert({
+    resultado_chave_id: krId,
+    ordem:   (existentes||[]).length + 1,
+    o_que:   g('pa-o_que').value.trim(),
+    como:    g('pa-como').value.trim(),
+    por_que: g('pa-por_que').value.trim(),
+    onde:    g('pa-onde').value.trim(),
+    quem:    g('pa-quem').value.trim(),
+    quando:  g('pa-quando').value.trim(),
+    quanto:  g('pa-quanto').value.trim()
+  });
+  if(error){notify('Erro ao salvar: '+error.message,'err');return;}
+  notify('Linha adicionada!');
+  await renderPlanoAcao(krId, krNome);
+}
+
+async function editarLinhaPA(linhaId, krId, krNome){
+  const {data:linha} = await SB.from('planos_acao').select('*').eq('id',linhaId).single();
+  const bd = g('pa-body');
+  if(!bd||!linha) return;
+  bd.innerHTML = `
+    <div style="margin-bottom:14px;font-size:13px;font-weight:600;color:#000">Editar linha do Plano de Ação</div>
+    ${formLinhaPA(krId, krNome, linha)}`;
+}
+
+async function atualizarLinhaPA(linhaId){
+  const krId   = g('pa-krid').value;
+  const krNome = g('pa-krnome').value;
+  if(!g('pa-o_que').value.trim()){notify('Preencha ao menos o campo "O Que".','err');return;}
+  const {error} = await SB.from('planos_acao').update({
+    o_que:      g('pa-o_que').value.trim(),
+    como:       g('pa-como').value.trim(),
+    por_que:    g('pa-por_que').value.trim(),
+    onde:       g('pa-onde').value.trim(),
+    quem:       g('pa-quem').value.trim(),
+    quando:     g('pa-quando').value.trim(),
+    quanto:     g('pa-quanto').value.trim(),
+    updated_at: new Date().toISOString()
+  }).eq('id', linhaId);
+  if(error){notify('Erro ao atualizar.','err');return;}
+  notify('Linha atualizada!');
+  await renderPlanoAcao(krId, krNome);
+}
+
+async function delLinhaPA(linhaId, krId, krNome){
+  if(!confirm('Excluir esta linha do Plano de Ação?')) return;
+  const {error} = await SB.from('planos_acao').delete().eq('id',linhaId);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Linha excluída.');
+  await renderPlanoAcao(krId, krNome);
+}
+
+// ── RAN (RELATÓRIO DE ANOMALIAS) ──────────
+
+async function openRanLista(unidadeId, unidadeNome){
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">📋 RAN — Relatório de Anomalias</div>
+    <div class="modal-sub">${unidadeNome}</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd-lg" id="ran-body">
+    <div class="loading"><div class="spin"></div>Carregando...</div>
+  </div>`, true);
+  await renderRanLista(unidadeId, unidadeNome);
+}
+
+async function renderRanLista(unidadeId, unidadeNome){
+  const {data:rans} = await SB.from('ran').select('*').eq('unidade_id', unidadeId).order('created_at');
+  const bd = g('ran-body'); if(!bd) return;
+  const pe = podeEditar(unidadeId);
+  const total = (rans||[]).length;
+
+  let h = `<div class="flex ic jb mb3">
+    <span style="font-size:13px;font-weight:600;color:#000">${total} RAN(s) de 10</span>
+    ${pe && total < 10 ? `<button class="btn btn-p btn-sm" onclick="openNovoRan('${unidadeId}','${unidadeNome}')">+ Novo RAN</button>` : ''}
+  </div>`;
+
+  if(!total){
+    h+=`<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">
+      Nenhum RAN cadastrado.${pe?' Clique em "+ Novo RAN" para começar.':''}
+    </div>`;
+  } else {
+    h += (rans||[]).map((r,idx)=>{
+      const dt = r.data_ran ? new Date(r.data_ran+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      const grauColor = r.grau_importancia==='Grave'?'b-R':'b-Y';
+      return `<div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid ${r.grau_importancia==='Grave'?'var(--R)':'var(--Y)'};border-radius:var(--r);padding:14px 16px;margin-bottom:10px">
+        <div class="flex ic jb mb2">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#000">RAN #${idx+1} — ${dt}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:3px">Resp: ${r.responsavel||'—'}</div>
+          </div>
+          <div class="flex ic gap2">
+            <span class="badge ${grauColor}">${r.grau_importancia}</span>
+            ${pe?`<button class="btn btn-p btn-sm" onclick="openVerRan('${r.id}','${unidadeId}','${unidadeNome}')">Ver / Editar</button>`:''}
+            <button class="btn btn-sm" onclick="openVerRan('${r.id}','${unidadeId}','${unidadeNome}')">👁 Ver</button>
+            ${pe?`<button class="btn btn-d btn-sm" onclick="delRan('${r.id}','${unidadeId}','${unidadeNome}')">🗑</button>`:''}
+          </div>
+        </div>
+        <div style="font-size:13px;color:var(--text2)">${r.descricao_anomalia||'—'}</div>
+      </div>`;
+    }).join('');
+  }
+  bd.innerHTML = h;
+}
+
+async function openNovoRan(unidadeId, unidadeNome){
+  const bd = g('ran-body'); if(!bd) return;
+  bd.innerHTML = `<div style="font-size:14px;font-weight:700;color:#000;margin-bottom:16px">Novo RAN — ${unidadeNome}</div>
+    ${formRan(unidadeId, unidadeNome, null, [], [])}`;
+}
+
+async function openVerRan(ranId, unidadeId, unidadeNome){
+  const bd = g('ran-body'); if(!bd) return;
+  bd.innerHTML = `<div class="loading"><div class="spin"></div>Carregando...</div>`;
+  const [{data:r},{data:pqs},{data:pa}] = await Promise.all([
+    SB.from('ran').select('*').eq('id',ranId).single(),
+    SB.from('ran_porques').select('*').eq('ran_id',ranId).order('ordem'),
+    SB.from('ran_plano_acao').select('*').eq('ran_id',ranId).order('ordem')
+  ]);
+  if(!r){bd.innerHTML='<div style="color:red">Erro ao carregar RAN.</div>';return;}
+  bd.innerHTML = `<div style="font-size:14px;font-weight:700;color:#000;margin-bottom:16px">Editar RAN</div>
+    ${formRan(unidadeId, unidadeNome, r, pqs||[], pa||[])}`;
+}
+
+function formRan(unidadeId, unidadeNome, r, pqs, pa){
+  const v = (campo, def='') => r ? (r[campo]||def) : def;
+  const ranId = r ? r.id : '';
+
+  // Linhas dos 5 por quês
+  const pqLinhas = pqs.length > 0 ? pqs : [{descricao_causa:'',porque:''}];
+  const pqRows = pqLinhas.map((p,i)=>`
+    <tr style="border-bottom:0.5px solid var(--border)">
+      <td style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--text3);width:30px">${i+1}</td>
+      <td style="padding:4px 6px"><input class="fi" style="padding:7px 10px;font-size:12px" name="pq-causa" placeholder="Descrição da Causa" value="${p.descricao_causa||''}"></td>
+      <td style="padding:4px 6px"><input class="fi" style="padding:7px 10px;font-size:12px" name="pq-pq" placeholder="Por quê?" value="${p.porque||''}"></td>
+      <td style="padding:4px 6px;width:36px"><button type="button" class="btn btn-d btn-sm" style="padding:4px 7px;min-height:unset;font-size:11px" onclick="this.closest('tr').remove()">🗑</button></td>
+    </tr>`).join('');
+
+  // Linhas do plano de ação
+  const paLinhas = pa.length > 0 ? pa : [{o_que:'',como:'',quem:'',porque:'',onde:'',quando:''}];
+  const paRows = paLinhas.map((p,i)=>`
+    <div class="ran-pa-row" style="background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;position:relative">
+      <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:10px;letter-spacing:.5px">LINHA ${i+1}
+        <button type="button" class="btn btn-d btn-sm" style="padding:3px 8px;min-height:unset;font-size:11px;position:absolute;top:10px;right:10px" onclick="this.closest('.ran-pa-row').remove();renumPa()">🗑 Remover</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="fg" style="margin:0"><label class="fl">O que</label><textarea class="fi" name="pa-oque" rows="2" placeholder="O que será feito?" style="resize:vertical;font-size:13px">${p.o_que||''}</textarea></div>
+        <div class="fg" style="margin:0"><label class="fl">Como</label><textarea class="fi" name="pa-como" rows="2" placeholder="Como será feito?" style="resize:vertical;font-size:13px">${p.como||''}</textarea></div>
+        <div class="fg" style="margin:0"><label class="fl">Por que</label><textarea class="fi" name="pa-porque" rows="2" placeholder="Por que é necessário?" style="resize:vertical;font-size:13px">${p.porque||''}</textarea></div>
+        <div class="fg" style="margin:0"><label class="fl">Quem</label><input class="fi" name="pa-quem" placeholder="Responsável" value="${p.quem||''}" style="font-size:13px"></div>
+        <div class="fg" style="margin:0"><label class="fl">Onde</label><input class="fi" name="pa-onde" placeholder="Local" value="${p.onde||''}" style="font-size:13px"></div>
+        <div class="fg" style="margin:0"><label class="fl">Quando</label><input class="fi" name="pa-quando" placeholder="Prazo" value="${p.quando||''}" style="font-size:13px"></div>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div id="ran-form">
+    <div class="frow mb2">
+      <div class="fg"><label class="fl">📅 Data</label><input class="fi" id="ran-data" type="date" value="${v('data_ran')}"></div>
+      <div class="fg"><label class="fl">👤 Responsável</label><input class="fi" id="ran-resp" placeholder="Nome do responsável" value="${v('responsavel')}"></div>
+    </div>
+    <div class="fg"><label class="fl">Descrição da Anomalia</label><textarea class="fi" id="ran-desc" rows="3" placeholder="Descreva a anomalia..." style="resize:vertical">${v('descricao_anomalia')}</textarea></div>
+    <div class="frow mb2">
+      <div class="fg">
+        <label class="fl">Grau de Importância</label>
+        <select class="fsel" id="ran-grau">
+          <option value="Médio" ${v('grau_importancia','Médio')==='Médio'?'selected':''}>Médio</option>
+          <option value="Grave" ${v('grau_importancia')==='Grave'?'selected':''}>Grave</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Ação Imediata para Correção</label><textarea class="fi" id="ran-acao" rows="2" placeholder="Descreva a ação imediata..." style="resize:vertical">${v('acao_imediata')}</textarea></div>
+    <div class="fg"><label class="fl">Observações Complementares</label><textarea class="fi" id="ran-obs" rows="2" placeholder="Observações adicionais..." style="resize:vertical">${v('observacoes_complementares')}</textarea></div>
+
+    <div style="margin:20px 0 10px;padding-top:16px;border-top:2px solid var(--border)">
+      <div style="font-size:14px;font-weight:700;color:#000;margin-bottom:10px">🔍 Análise das Anomalias — 5 Por Quês</div>
+      <div style="overflow-x:auto">
+        <table id="pq-table" style="width:100%;border-collapse:collapse;min-width:500px">
+          <thead><tr style="background:var(--bg4)">
+            <th style="padding:8px;font-size:10px;color:var(--text3);text-transform:uppercase;border-bottom:2px solid var(--border)">#</th>
+            <th style="padding:8px;font-size:10px;color:var(--text3);text-transform:uppercase;border-bottom:2px solid var(--border);text-align:left">Descrição da Causa</th>
+            <th style="padding:8px;font-size:10px;color:var(--text3);text-transform:uppercase;border-bottom:2px solid var(--border);text-align:left">Por quê?</th>
+            <th style="padding:8px;border-bottom:2px solid var(--border)"></th>
+          </tr></thead>
+          <tbody id="pq-tbody">${pqRows}</tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-sm" style="margin-top:8px" onclick="addPqRow()">+ Linha</button>
+    </div>
+
+    <div style="margin:20px 0 10px;padding-top:16px;border-top:2px solid var(--border)">
+      <div style="font-size:14px;font-weight:700;color:#000;margin-bottom:10px">📌 Plano de Ação</div>
+      <div id="pa-tbody">${paRows}</div>
+      <button type="button" class="btn btn-sm" style="margin-top:4px" onclick="addPaRow()">+ Nova Linha</button>
+    </div>
+
+    <div style="margin-top:16px;padding-top:16px;border-top:2px solid var(--border)">
+      <div class="fg"><label class="fl">Observações Finais</label><textarea class="fi" id="ran-obsfin" rows="3" placeholder="Observações finais..." style="resize:vertical">${v('observacoes_finais')}</textarea></div>
+    </div>
+
+    <input type="hidden" id="ran-uid" value="${unidadeId}">
+    <input type="hidden" id="ran-unome" value="${unidadeNome}">
+    <input type="hidden" id="ran-id" value="${ranId}">
+    <div class="btn-row" style="margin-top:20px">
+      <button class="btn btn-p btn-full" onclick="${ranId?'updRan()':'saveRan()'}">
+        ${ranId?'Salvar Alterações':'Registrar RAN'}
+      </button>
+      <button class="btn btn-full" onclick="renderRanLista('${unidadeId}','${unidadeNome}')">Cancelar</button>
+    </div>
+    </div>`;
+}
+
+function addPqRow(){
+  const tb = g('pq-tbody'); if(!tb) return;
+  const n = tb.rows.length+1;
+  if(n>20){notify('Limite de 20 linhas atingido.','err');return;}
+  const tr = document.createElement('tr');
+  tr.style.borderBottom='0.5px solid var(--border)';
+  tr.innerHTML=`
+    <td style="padding:6px 8px;font-size:12px;font-weight:600;color:var(--text3)">${n}</td>
+    <td style="padding:4px 6px"><input class="fi" style="padding:7px 10px;font-size:12px" name="pq-causa" placeholder="Descrição da Causa"></td>
+    <td style="padding:4px 6px"><input class="fi" style="padding:7px 10px;font-size:12px" name="pq-pq" placeholder="Por quê?"></td>
+    <td style="padding:4px 6px"><button type="button" class="btn btn-d btn-sm" style="padding:4px 7px;min-height:unset;font-size:11px" onclick="this.closest('tr').remove()">🗑</button></td>`;
+  tb.appendChild(tr);
+}
+
+function addPaRow(){
+  const tb = g('pa-tbody'); if(!tb) return;
+  const n = tb.querySelectorAll('.ran-pa-row').length + 1;
+  if(n > 10){notify('Limite de 10 linhas atingido.','err'); return;}
+  const div = document.createElement('div');
+  div.className = 'ran-pa-row';
+  div.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-left:3px solid var(--acc);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;position:relative';
+  div.innerHTML = `
+    <div style="font-size:11px;font-weight:700;color:var(--acc);margin-bottom:10px;letter-spacing:.5px">LINHA ${n}
+      <button type="button" class="btn btn-d btn-sm" style="padding:3px 8px;min-height:unset;font-size:11px;position:absolute;top:10px;right:10px" onclick="this.closest('.ran-pa-row').remove();renumPa()">🗑 Remover</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg" style="margin:0"><label class="fl">O que</label><textarea class="fi" name="pa-oque" rows="2" placeholder="O que será feito?" style="resize:vertical;font-size:13px"></textarea></div>
+      <div class="fg" style="margin:0"><label class="fl">Como</label><textarea class="fi" name="pa-como" rows="2" placeholder="Como será feito?" style="resize:vertical;font-size:13px"></textarea></div>
+      <div class="fg" style="margin:0"><label class="fl">Por que</label><textarea class="fi" name="pa-porque" rows="2" placeholder="Por que é necessário?" style="resize:vertical;font-size:13px"></textarea></div>
+      <div class="fg" style="margin:0"><label class="fl">Quem</label><input class="fi" name="pa-quem" placeholder="Responsável" style="font-size:13px"></div>
+      <div class="fg" style="margin:0"><label class="fl">Onde</label><input class="fi" name="pa-onde" placeholder="Local" style="font-size:13px"></div>
+      <div class="fg" style="margin:0"><label class="fl">Quando</label><input class="fi" name="pa-quando" placeholder="Prazo" style="font-size:13px"></div>
+    </div>`;
+  tb.appendChild(div);
+}
+
+function renumPa(){
+  const tb = g('pa-tbody'); if(!tb) return;
+  tb.querySelectorAll('.ran-pa-row').forEach((row, idx)=>{
+    const lbl = row.querySelector('div');
+    if(lbl) lbl.childNodes[0].textContent = `LINHA ${idx+1} `;
+  });
+}
+
+function coletarPqs(){
+  const causas = document.querySelectorAll('[name="pq-causa"]');
+  const porques = document.querySelectorAll('[name="pq-pq"]');
+  const linhas = [];
+  causas.forEach((c,i)=>{
+    if(c.value.trim()||porques[i]?.value.trim()){
+      linhas.push({descricao_causa:c.value.trim(), porque:porques[i]?.value.trim()||'', ordem:i+1});
+    }
+  });
+  return linhas;
+}
+
+function coletarPa(){
+  const rows = document.querySelectorAll('.ran-pa-row');
+  const linhas = [];
+  rows.forEach((row, i)=>{
+    const oq = row.querySelector('[name="pa-oque"]')?.value.trim();
+    if(oq){
+      linhas.push({
+        ordem:  i+1,
+        o_que:  oq,
+        como:   row.querySelector('[name="pa-como"]')?.value.trim()||'',
+        porque: row.querySelector('[name="pa-porque"]')?.value.trim()||'',
+        quem:   row.querySelector('[name="pa-quem"]')?.value.trim()||'',
+        onde:   row.querySelector('[name="pa-onde"]')?.value.trim()||'',
+        quando: row.querySelector('[name="pa-quando"]')?.value.trim()||''
+      });
+    }
+  });
+  return linhas;
+}
+
+async function saveRan(){
+  const uid   = g('ran-uid').value;
+  const unome = g('ran-unome').value;
+  const desc  = g('ran-desc').value.trim();
+  if(!desc){notify('Preencha a descrição da anomalia.','err');return;}
+  const {data:all} = await SB.from('ran').select('id').eq('unidade_id',uid);
+  if((all||[]).length>=10){notify('Limite de 10 RANs por unidade.','err');return;}
+  const {data:novo, error} = await SB.from('ran').insert({
+    unidade_id:               uid,
+    data_ran:                 g('ran-data').value||null,
+    responsavel:              g('ran-resp').value.trim(),
+    descricao_anomalia:       desc,
+    grau_importancia:         g('ran-grau').value,
+    acao_imediata:            g('ran-acao').value.trim(),
+    observacoes_complementares: g('ran-obs').value.trim(),
+    observacoes_finais:       g('ran-obsfin').value.trim()
+  }).select().single();
+  if(error){notify('Erro ao salvar: '+error.message,'err');return;}
+  const pqs = coletarPqs();
+  const pa  = coletarPa();
+  if(pqs.length) await SB.from('ran_porques').insert(pqs.map(p=>({...p, ran_id:novo.id})));
+  if(pa.length)  await SB.from('ran_plano_acao').insert(pa.map(p=>({...p, ran_id:novo.id})));
+  notify('RAN registrado com sucesso!');
+  await registrarUpdate();
+  await renderRanLista(uid, unome);
+}
+
+async function updRan(){
+  const uid   = g('ran-uid').value;
+  const unome = g('ran-unome').value;
+  const ranId = g('ran-id').value;
+  const desc  = g('ran-desc').value.trim();
+  if(!desc){notify('Preencha a descrição da anomalia.','err');return;}
+  const {error} = await SB.from('ran').update({
+    data_ran:                 g('ran-data').value||null,
+    responsavel:              g('ran-resp').value.trim(),
+    descricao_anomalia:       desc,
+    grau_importancia:         g('ran-grau').value,
+    acao_imediata:            g('ran-acao').value.trim(),
+    observacoes_complementares: g('ran-obs').value.trim(),
+    observacoes_finais:       g('ran-obsfin').value.trim(),
+    updated_at:               new Date().toISOString()
+  }).eq('id', ranId);
+  if(error){notify('Erro ao atualizar.','err');return;}
+  // Recriar por quês e plano de ação
+  await SB.from('ran_porques').delete().eq('ran_id', ranId);
+  await SB.from('ran_plano_acao').delete().eq('ran_id', ranId);
+  const pqs = coletarPqs();
+  const pa  = coletarPa();
+  if(pqs.length) await SB.from('ran_porques').insert(pqs.map(p=>({...p, ran_id:ranId})));
+  if(pa.length)  await SB.from('ran_plano_acao').insert(pa.map(p=>({...p, ran_id:ranId})));
+  notify('RAN atualizado!');
+  await registrarUpdate();
+  await renderRanLista(uid, unome);
+}
+
+async function delRan(ranId, unidadeId, unidadeNome){
+  if(!confirm('Excluir este RAN e todos os seus dados?'))return;
+  const {error} = await SB.from('ran').delete().eq('id', ranId);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('RAN excluído.');
+  await registrarUpdate();
+  await renderRanLista(unidadeId, unidadeNome);
+}
+
+// ── DIÁRIO DE BORDO ───────────────────────
+async function openDiario(unidadeId, unidadeNome){
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">📒 Diário de Bordo</div>
+    <div class="modal-sub">${unidadeNome}</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd-lg" id="db-body">
+    <div class="loading"><div class="spin"></div>Carregando...</div>
+  </div>`, true);
+  await renderDiario(unidadeId, unidadeNome);
+}
+
+async function renderDiario(unidadeId, unidadeNome){
+  const {data:linhas} = await SB
+    .from('diario_bordo')
+    .select('*')
+    .eq('unidade_id', unidadeId)
+    .order('numero');
+  const bd = g('db-body');
+  if(!bd) return;
+  const pe = podeEditar(unidadeId);
+  const total = (linhas||[]).length;
+  const solucionadas = (linhas||[]).filter(l=>l.status==='Solucionada').length;
+  const taxa = total ? Math.round(solucionadas/total*100) : 0;
+
+  let h = `<div class="flex ic jb mb2">
+    <span style="font-size:13px;font-weight:600;color:#000">${total} anomalia(s) de 20</span>
+    ${pe && total < 20 ? `<button class="btn btn-p btn-sm" onclick="openNovaAnomalia('${unidadeId}','${unidadeNome}')">+ Nova Anomalia</button>` : ''}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px">
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:4px solid ${ghx(taxa)};border-radius:var(--r);padding:12px 16px">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Taxa de Solução</div>
+      <div style="font-family:var(--font-d);font-size:28px;font-weight:800;color:${ghx(taxa)}">${taxa}%</div>
+      <div style="margin-top:6px">${badge(taxa)}</div>
+      <div style="height:5px;background:var(--bg5);border-radius:3px;overflow:hidden;margin-top:8px"><div style="height:100%;width:${taxa}%;background:${ghx(taxa)};border-radius:3px"></div></div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:4px solid var(--G);border-radius:var(--r);padding:12px 16px">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Solucionadas</div>
+      <div style="font-family:var(--font-d);font-size:28px;font-weight:800;color:var(--G)">${solucionadas}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px">de ${total} anomalia(s)</div>
+    </div>
+    <div style="background:var(--bg3);border:1px solid var(--border);border-left:4px solid var(--R);border-radius:var(--r);padding:12px 16px">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Pendentes</div>
+      <div style="font-family:var(--font-d);font-size:28px;font-weight:800;color:var(--R)">${total-solucionadas}</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:6px">de ${total} anomalia(s)</div>
+    </div>
+  </div>`;
+
+  if(total === 0){
+    h += `<div style="text-align:center;padding:32px;color:var(--text3);font-size:13px">
+      Nenhuma anomalia registrada.<br>
+      ${pe ? 'Clique em "+ Nova Anomalia" para começar.' : ''}
+    </div>`;
+  } else {
+    h += `<div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <thead>
+          <tr style="background:var(--bg4)">
+            ${['Nº','Descrição da Anomalia','Contramedidas Imediatas','Reincidente?','Status','Relator','Data',''].map(c=>
+              `<th style="padding:9px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--text3);letter-spacing:.5px;text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap">${c}</th>`
+            ).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${(linhas||[]).map((l,idx)=>{
+            const bgRow = idx%2===0?'var(--bg2)':'var(--bg3)';
+            const statusColor = l.status==='Solucionada'?'b-G':'b-R';
+            const reincColor  = l.reincidente?'b-R':'b-G';
+            const data = l.data_ocorrencia ? new Date(l.data_ocorrencia+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+            return `<tr style="border-bottom:1px solid var(--border);background:${bgRow}">
+              <td style="padding:9px 10px;font-weight:700;color:#000;white-space:nowrap">${l.numero}</td>
+              <td style="padding:9px 10px;color:#000;font-weight:500;min-width:180px">${l.descricao||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);min-width:160px">${l.contramedidas||'—'}</td>
+              <td style="padding:9px 10px;white-space:nowrap"><span class="badge ${reincColor}">${l.reincidente?'Sim':'Não'}</span></td>
+              <td style="padding:9px 10px;white-space:nowrap"><span class="badge ${statusColor}">${l.status}</span></td>
+              <td style="padding:9px 10px;color:var(--text2);white-space:nowrap">${l.relator||'—'}</td>
+              <td style="padding:9px 10px;color:var(--text2);white-space:nowrap">${data}</td>
+              <td style="padding:9px 10px;white-space:nowrap">
+                ${pe?`<div class="flex ic gap2">
+                  <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editAnomalia('${l.id}','${unidadeId}','${unidadeNome}')">✎</button>
+                  <button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delAnomalia('${l.id}','${unidadeId}','${unidadeNome}')">🗑</button>
+                </div>`:''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+  }
+  bd.innerHTML = h;
+}
+
+function formAnomalia(unidadeId, unidadeNome, a){
+  const v = campo => a ? (a[campo]??'') : '';
+  const proxNum = a ? a.numero : '';
+  return `
+    <div class="frow">
+      <div class="fg"><label class="fl">Nº da Anomalia</label><input class="fi" id="da-num" type="number" min="1" value="${proxNum}" placeholder="Ex: 1"></div>
+      <div class="fg"><label class="fl">📅 Data da Ocorrência</label><input class="fi" id="da-data" type="date" value="${v('data_ocorrencia')}"></div>
+    </div>
+    <div class="fg"><label class="fl">Descrição da Anomalia</label><textarea class="fi" id="da-desc" rows="2" placeholder="Descreva a anomalia..." style="resize:vertical">${v('descricao')}</textarea></div>
+    <div class="fg"><label class="fl">Contramedidas Imediatas</label><textarea class="fi" id="da-cont" rows="2" placeholder="Ações tomadas imediatamente..." style="resize:vertical">${v('contramedidas')}</textarea></div>
+    <div class="frow">
+      <div class="fg">
+        <label class="fl">Reincidente?</label>
+        <select class="fsel" id="da-rein">
+          <option value="false" ${!a||!a.reincidente?'selected':''}>Não</option>
+          <option value="true"  ${a&&a.reincidente?'selected':''}>Sim</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label class="fl">Status</label>
+        <select class="fsel" id="da-status">
+          <option value="Pendente"    ${!a||a.status==='Pendente'?'selected':''}>Pendente</option>
+          <option value="Solucionada" ${a&&a.status==='Solucionada'?'selected':''}>Solucionada</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Relator</label><input class="fi" id="da-rel" value="${v('relator')}" placeholder="Nome do relator"></div>
+    <input type="hidden" id="da-uid" value="${unidadeId}">
+    <input type="hidden" id="da-unome" value="${unidadeNome}">
+    ${a?`<input type="hidden" id="da-id" value="${a.id}">`:''}
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" onclick="${a?`updAnomalia('${a.id}')`:'saveAnomalia()'}">
+        ${a?'Salvar Alterações':'Registrar Anomalia'}
+      </button>
+      <button class="btn btn-full" onclick="renderDiario('${unidadeId}','${unidadeNome}')">Cancelar</button>
+    </div>`;
+}
+
+function openNovaAnomalia(unidadeId, unidadeNome){
+  const bd = g('db-body');
+  if(!bd) return;
+  bd.innerHTML = `<div style="font-size:13px;font-weight:600;color:#000;margin-bottom:14px">Nova Anomalia</div>
+    ${formAnomalia(unidadeId, unidadeNome, null)}`;
+}
+
+async function saveAnomalia(){
+  const uid   = g('da-uid').value;
+  const unome = g('da-unome').value;
+  const num   = parseInt(g('da-num').value)||0;
+  const desc  = g('da-desc').value.trim();
+  if(!desc||!num){notify('Preencha pelo menos o número e a descrição.','err');return;}
+  const {data:all} = await SB.from('diario_bordo').select('id').eq('unidade_id',uid);
+  if((all||[]).length>=20){notify('Limite de 20 anomalias atingido.','err');return;}
+  const {error} = await SB.from('diario_bordo').insert({
+    unidade_id:      uid,
+    numero:          num,
+    descricao:       desc,
+    contramedidas:   g('da-cont').value.trim(),
+    reincidente:     g('da-rein').value==='true',
+    status:          g('da-status').value,
+    relator:         g('da-rel').value.trim(),
+    data_ocorrencia: g('da-data').value||null
+  });
+  if(error){notify('Erro ao salvar: '+error.message,'err');return;}
+  notify('Anomalia registrada!');
+  await registrarUpdate();
+  await renderDiario(uid, unome);
+}
+
+async function editAnomalia(id, unidadeId, unidadeNome){
+  const {data:a} = await SB.from('diario_bordo').select('*').eq('id',id).single();
+  const bd = g('db-body');
+  if(!bd||!a) return;
+  bd.innerHTML = `<div style="font-size:13px;font-weight:600;color:#000;margin-bottom:14px">Editar Anomalia</div>
+    ${formAnomalia(unidadeId, unidadeNome, a)}`;
+}
+
+async function updAnomalia(id){
+  const uid   = g('da-uid').value;
+  const unome = g('da-unome').value;
+  const desc  = g('da-desc').value.trim();
+  if(!desc){notify('Preencha a descrição.','err');return;}
+  const {error} = await SB.from('diario_bordo').update({
+    numero:          parseInt(g('da-num').value)||1,
+    descricao:       desc,
+    contramedidas:   g('da-cont').value.trim(),
+    reincidente:     g('da-rein').value==='true',
+    status:          g('da-status').value,
+    relator:         g('da-rel').value.trim(),
+    data_ocorrencia: g('da-data').value||null,
+    updated_at:      new Date().toISOString()
+  }).eq('id',id);
+  if(error){notify('Erro ao atualizar.','err');return;}
+  notify('Anomalia atualizada!');
+  await registrarUpdate();
+  await renderDiario(uid, unome);
+}
+
+async function delAnomalia(id, unidadeId, unidadeNome){
+  if(!confirm('Excluir esta anomalia do Diário de Bordo?'))return;
+  const {error} = await SB.from('diario_bordo').delete().eq('id',id);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Anomalia excluída.');
+  await registrarUpdate();
+  await renderDiario(unidadeId, unidadeNome);
+}
+
+// ── COMENTÁRIOS KR ────────────────────────
+async function openComentarios(krId, krNome){
+  showModal(`<div class="modal-hd">
+    <div>
+      <div class="modal-title">💬 Comentários</div>
+      <div class="modal-sub" style="max-width:600px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${krNome}</div>
+    </div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd-lg" id="com-body">
+    <div class="loading"><div class="spin"></div>Carregando...</div>
+  </div>`, true);
+  await renderComentarios(krId, krNome);
+}
+
+async function renderComentarios(krId, krNome){
+  const {data:coms, error} = await SB
+    .from('comentarios_kr')
+    .select('*')
+    .eq('resultado_chave_id', krId)
+    .order('created_at', {ascending: false});
+
+  const adm = CU.role === 'admin';
+  const bd = g('com-body');
+  if(!bd) return;
+
+  let h = `
+    <div class="fg">
+      <label class="fl">Novo comentário</label>
+      <textarea class="fi" id="com-txt" rows="3" placeholder="Digite seu comentário..." style="resize:vertical;line-height:1.5"></textarea>
+    </div>
+    <button class="btn btn-p btn-full" onclick="saveComentario('${krId}','${krNome.replace(/'/g,'')}')">Publicar comentário</button>
+    <div class="divider"></div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:10px">${(coms||[]).length} comentário(s)</div>`;
+
+  if(!coms || coms.length === 0){
+    h += `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Nenhum comentário ainda. Seja o primeiro!</div>`;
+  } else {
+    coms.forEach(c => {
+      const dt = new Date(c.created_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      h += `<div id="com-${c.id}" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:10px">
+        <div class="flex ic jb mb1">
+          <div class="flex ic gap2">
+            <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--acc),#6366f1);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${(c.autor||'?')[0].toUpperCase()}</div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--text)">${c.autor||'Usuário'}</div>
+              <div style="font-size:10px;color:var(--text3)">${dt}</div>
+            </div>
+          </div>
+          ${adm?`<div class="flex ic gap2">
+            <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editComentario('${c.id}','${krId}','${krNome.replace(/'/g,'')}')">✎</button>
+            <button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delComentario('${c.id}','${krId}','${krNome.replace(/'/g,'')}')">🗑</button>
+          </div>`:''}
+        </div>
+        <div id="com-txt-${c.id}" style="font-size:13px;color:var(--text2);line-height:1.6;margin-top:6px;white-space:pre-wrap">${c.texto}</div>
+      </div>`;
+    });
+  }
+
+  bd.innerHTML = h;
+}
+
+async function saveComentario(krId, krNome){
+  const txt = g('com-txt')?.value.trim();
+  if(!txt){ notify('Digite um comentário.','err'); return; }
+  const {error} = await SB.from('comentarios_kr').insert({
+    resultado_chave_id: krId,
+    texto: txt,
+    autor: CU.name
+  });
+  if(error){ notify('Erro ao salvar comentário.','err'); return; }
+  notify('Comentário publicado!');
+  await renderComentarios(krId, krNome);
+}
+
+function editComentario(comId, krId, krNome){
+  const el = g(`com-txt-${comId}`);
+  if(!el) return;
+  const textoAtual = el.textContent;
+  el.innerHTML = `
+    <textarea class="fi" id="edit-txt-${comId}" rows="3" style="resize:vertical;margin-bottom:8px;line-height:1.5">${textoAtual}</textarea>
+    <div class="flex gap2">
+      <button class="btn btn-p btn-sm" style="flex:1" onclick="saveEditComentario('${comId}','${krId}','${krNome}')">Salvar</button>
+      <button class="btn btn-sm" style="flex:1" onclick="renderComentarios('${krId}','${krNome}')">Cancelar</button>
+    </div>`;
+}
+
+async function saveEditComentario(comId, krId, krNome){
+  const txt = g(`edit-txt-${comId}`)?.value.trim();
+  if(!txt){ notify('O comentário não pode ficar vazio.','err'); return; }
+  const {error} = await SB.from('comentarios_kr').update({
+    texto: txt,
+    updated_at: new Date().toISOString()
+  }).eq('id', comId);
+  if(error){ notify('Erro ao atualizar.','err'); return; }
+  notify('Comentário atualizado!');
+  await renderComentarios(krId, krNome);
+}
+
+async function delComentario(comId, krId, krNome){
+  if(!confirm('Excluir este comentário?')) return;
+  const {error} = await SB.from('comentarios_kr').delete().eq('id', comId);
+  if(error){ notify('Erro ao excluir.','err'); return; }
+  notify('Comentário excluído.');
+  await renderComentarios(krId, krNome);
+}
+
+// ── MODAL ─────────────────────────────────
+function showModal(html, isLarge=false){
+  const mbox = g('mbox');
+  mbox.className = isLarge ? 'modal-lg' : 'modal';
+  mbox.innerHTML = html;
+  const ov=g('mov'); ov.classList.add('on');
+  ov.onclick=e=>{ if(e.target===ov) cModal(); };
+}
+function cModal(){ g('mov').classList.remove('on'); g('mbox').innerHTML=''; }
+
+// ── INIT ──────────────────────────────────
+(async()=>{
+  // Sempre encerra sessão anterior ao abrir — exige login a cada acesso
+  await SB.auth.signOut();
+})();
+</script>
+</body>
+</html>
