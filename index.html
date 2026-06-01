@@ -359,7 +359,7 @@ const ppct    = p  => p.marcos.length ? Math.round(p.marcos.filter(m=>m.done).le
 
 function notify(msg, type='ok'){
   const s=g('snack'); s.textContent=msg; s.className=`snack on ${type}`;
-  clearTimeout(window._nt); window._nt=setTimeout(()=>s.className='snack',3000);
+  clearTimeout(window._nt); window._nt=setTimeout(()=>s.className='snack', type==='err'?8000:3000);
 }
 function setPage(html){ g('content').innerHTML=html; window.scrollTo(0,0); }
 function loading(msg='Carregando...'){ setPage(`<div class="loading"><div class="spin"></div>${msg}</div>`); }
@@ -1426,49 +1426,66 @@ async function criarUsuario(){
   }
 
   const btn=g('btn-criar-user'); btn.disabled=true; btn.textContent='Criando...';
+
+  function erroModal(msg){
+    let erroEl = g('nu-erro');
+    if(!erroEl){
+      erroEl = document.createElement('div');
+      erroEl.id = 'nu-erro';
+      erroEl.style.cssText = 'background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:13px;color:#991b1b;margin-bottom:12px';
+      const bd = g('btn-criar-user')?.parentElement;
+      if(bd) bd.parentElement.insertBefore(erroEl, bd);
+    }
+    erroEl.textContent = '⚠ ' + msg;
+    btn.disabled=false; btn.textContent='Criar Usuário';
+  }
+
   try {
-    // 1. Criar usuário via signUp
-    const {data,error} = await SB.auth.signUp({email, password:senha, options:{data:{nome}}});
-    if(error){notify('Erro: '+error.message,'err');btn.disabled=false;btn.textContent='Criar Usuário';return;}
+    // 1. Criar usuário
+    const {data,error} = await SB.auth.signUp({
+      email, password:senha,
+      options:{data:{nome}}
+    });
+    if(error){ erroModal(error.message); return; }
 
-    let userId = data?.user?.id;
+    const userId = data?.user?.id;
+    if(!userId){ erroModal('Não foi possível obter o ID do usuário.'); return; }
 
-    // 2. Se não retornou id (usuário já existe ou pendente), buscar pelo email
-    if(!userId){
-      const {data:perfisExist} = await SB.from('perfis').select('id').eq('nome',email).limit(1);
-      if(perfisExist&&perfisExist.length>0) userId = perfisExist[0].id;
-    }
+    // 2. Confirmar email
+    try { await SB.rpc('confirmar_usuario', {user_id: userId}); } catch(e){}
 
-    if(!userId){
-      notify('Erro: não foi possível obter o ID do usuário.','err');
-      btn.disabled=false; btn.textContent='Criar Usuário'; return;
-    }
+    // 3. Aguardar processamento
+    await new Promise(r => setTimeout(r, 1500));
 
-    // 3. Salvar perfil com unidade_id
-    const {error:perfErr} = await SB.from('perfis').upsert({
-      id:        userId,
-      nome:      nome,
-      papel:     papel,
+    // 4. Inserir perfil diretamente (sem upsert para evitar conflito de FK)
+    // Primeiro tenta DELETE + INSERT para garantir
+    await SB.from('perfis').delete().eq('id', userId);
+    const {error:perfErr} = await SB.from('perfis').insert({
+      id:         userId,
+      nome:       nome,
+      papel:      papel,
       unidade_id: unidadeId||null
-    },{onConflict:'id'});
+    });
 
     if(perfErr){
-      notify('Usuário criado mas erro ao salvar perfil: '+perfErr.message,'err');
+      // Tentar upsert como fallback
+      const {error:upsertErr} = await SB.from('perfis').upsert({
+        id:         userId,
+        nome:       nome,
+        papel:      papel,
+        unidade_id: unidadeId||null
+      },{onConflict:'id'});
+      if(upsertErr){ erroModal('Erro ao salvar perfil: '+upsertErr.message); return; }
     }
 
-    // 4. Confirmar email automaticamente
-    try { await SB.rpc('confirmar_usuario', {user_id:userId}); } catch(e){}
-
-    // 5. Se nova unidade foi criada, recarregar dados
+    // 5. Recarregar e fechar
     await loadAll();
-
     cModal();
     notify(`✅ Usuário "${nome}" criado! Senha: "${senha}"`);
     await rAdm();
 
   } catch(e){
-    notify('Erro inesperado: '+e.message,'err');
-    btn.disabled=false; btn.textContent='Criar Usuário';
+    erroModal('Erro inesperado: '+e.message);
   }
 }
 
@@ -2276,8 +2293,18 @@ function cModal(){ g('mov').classList.remove('on'); g('mbox').innerHTML=''; }
 
 // ── INIT ──────────────────────────────────
 (async()=>{
-  // Sempre encerra sessão anterior ao abrir — exige login a cada acesso
-  await SB.auth.signOut();
+  // Verificar se há sessão ativa ao carregar/atualizar a página
+  const {data:{session}} = await SB.auth.getSession();
+  if(session){
+    const {data:perfil} = await SB.from('perfis').select('*').eq('id',session.user.id).single();
+    CU = {
+      id:        session.user.id,
+      name:      perfil?.nome||session.user.email,
+      role:      perfil?.papel||'user',
+      unidadeId: perfil?.unidade_id||null
+    };
+    await loadAll(); bootApp(); setupRealtime();
+  }
 })();
 </script>
 </body>
