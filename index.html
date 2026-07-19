@@ -400,7 +400,7 @@ async function loadAll(){
     D.responsaveis = (r.data||[]).map(x=>({id:x.id,uId:x.unidade_id,name:x.nome}));
     D.okrs         = (ok.data||[]).map(x=>({id:x.id,rId:x.responsavel_id,name:x.nome}));
     D.krs          = (kr.data||[]).map(x=>({id:x.id,okId:x.objetivo_okr_id,name:x.nome,p:Number(x.progresso)||0,data_inicio:x.data_inicio||null,data_fim:x.data_fim||null}));
-    D.projetos     = (pr.data||[]).map(x=>({id:x.id,name:x.nome,marcos:(ma.data||[]).filter(m=>m.projeto_id===x.id).map(m=>({id:m.id,name:m.nome,done:m.finalizado}))}));
+    D.projetos     = (pr.data||[]).map(x=>({id:x.id,name:x.nome,lider:x.lider||'',marcos:(ma.data||[]).filter(m=>m.projeto_id===x.id).map(m=>({id:m.id,name:m.nome,done:m.finalizado,resp:m.responsavel||'',dataFim:m.data_finalizacao||null}))}));
   } catch(e){ console.error(e); notify('Erro ao carregar dados','err'); }
 }
 
@@ -1029,6 +1029,7 @@ function rOKR(){
                   <div class="flex ic gap2" style="flex-wrap:wrap">
                     <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px;border-color:var(--Gb);color:var(--G)" onclick="openPlanoAcao('${kr.id}','${kr.name.replace(/'/g,'')}')">📋</button>
                     <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:13px;border-color:var(--Bb);color:var(--acc)" onclick="openComentarios('${kr.id}','${kr.name.replace(/'/g,'')}')">💬</button>
+                    <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:13px;border-color:#7c3aed;color:#7c3aed" onclick="openAnexos('${kr.id}','${kr.name.replace(/'/g,'')}')">📎</button>
                     ${pe?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editKR('${kr.id}')">✎</button>`:''}
                     ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delKR('${kr.id}')" title="Excluir KR">🗑</button>`:''}
                   </div>
@@ -1211,7 +1212,11 @@ function rProj(){
     const pc=ppct(p),c=gc(pc),done=p.marcos.filter(m=>m.done).length;
     h+=`<div class="proj-card bg-${c}" style="border-top:3px solid var(--acc);background:var(--bg2)" onclick="openProj('${p.id}')">
       <div class="flex ic jb mb2">
-        <div><div class="proj-nm" style="color:var(--text)">${p.name}</div><div class="proj-meta">${done}/${p.marcos.length} marcos concluídos</div></div>
+        <div>
+          <div class="proj-nm" style="color:var(--text)">${p.name}</div>
+          ${p.lider?`<div style="font-size:11px;color:var(--text3);margin-top:2px">👤 ${p.lider}</div>`:''}
+          <div class="proj-meta">${done}/${p.marcos.length} marcos concluídos</div>
+        </div>
         <span class="proj-score c-${c}">${pc}%</span>
       </div>
       ${pbar(pc,7)}
@@ -1226,7 +1231,10 @@ function openProj(id){
   const p=D.projetos.find(x=>x.id===id),pc=ppct(p),adm=CU.role==='admin';
   const done=p.marcos.filter(m=>m.done).length;
   let h=`<div class="modal-hd">
-    <div><div class="modal-title">${p.name}</div><div class="modal-sub">${done}/${p.marcos.length} marcos &middot; <b style="color:${ghx(pc)}">${pc}%</b></div></div>
+    <div>
+      <div class="modal-title">${p.name}</div>
+      <div class="modal-sub">${done}/${p.marcos.length} marcos &middot; <b style="color:${ghx(pc)}">${pc}%</b>${p.lider?` &middot; 👤 ${p.lider}`:''}</div>
+    </div>
     <button class="mclose" onclick="cModal()">×</button>
   </div>
   <div class="modal-bd">
@@ -1236,13 +1244,20 @@ function openProj(id){
       ${adm&&p.marcos.length<20?`<button class="btn btn-p btn-sm" onclick="openNovoMarco('${id}')">+ Marco</button>`:''}
     </div>`;
   p.marcos.forEach(m=>{
-    h+=`<div class="mstone">
+    const dataFim = m.dataFim ? new Date(m.dataFim+'T12:00:00').toLocaleDateString('pt-BR') : '';
+    h+=`<div class="mstone" style="flex-wrap:wrap;gap:6px;padding:10px 0;border-bottom:1px solid var(--border)">
       <div class="mcheck ${m.done?'done':''}" onclick="${adm?`togM('${id}','${m.id}',${!m.done})`:''}">
         ${m.done?'✓':''}
       </div>
-      <span class="mstone-nm ${m.done?'done':''}">${m.name}</span>
+      <div style="flex:1;min-width:0">
+        <div class="mstone-nm ${m.done?'done':''}" style="margin:0">${m.name}</div>
+        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
+          ${m.resp?`<span style="font-size:11px;color:var(--text3)">👤 ${m.resp}</span>`:''}
+          ${dataFim?`<span style="font-size:11px;color:var(--text3)">📅 ${dataFim}</span>`:''}
+        </div>
+      </div>
       <span class="badge ${m.done?'b-G':'b-R'}">${m.done?'Feito':'Pendente'}</span>
-      ${adm?`<button class="btn btn-d btn-sm" style="margin-left:8px;padding:4px 8px;min-height:unset;font-size:11px" onclick="delMarco('${id}','${m.id}')" title="Excluir marco">🗑</button>`:''}
+      ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delMarco('${id}','${m.id}')" title="Excluir marco">🗑</button>`:''}
     </div>`;
   });
   if(adm){
@@ -1268,17 +1283,20 @@ async function delMarco(pId,mId){
   registrarUpdate();
   await loadAllAndLog(); openProj(pId); rProj();
 }
+
 function openNovoProj(){
   showModal(`<div class="modal-hd"><div class="modal-title">Novo Projeto Especial</div><button class="mclose" onclick="cModal()">×</button></div>
   <div class="modal-bd">
-    <div class="fg"><label class="fl">Nome do projeto</label><input class="fi" id="fpn" placeholder="Ex: Transformação Digital"></div>
+    <div class="fg"><label class="fl">Nome do Projeto</label><input class="fi" id="fpn" placeholder="Ex: Transformação Digital"></div>
+    <div class="fg"><label class="fl">👤 Líder do Projeto</label><input class="fi" id="fpl" placeholder="Nome do líder responsável"></div>
     <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveProj()">Criar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
   </div>`);
 }
 async function saveProj(){
   const n=g('fpn').value.trim(); if(!n){notify('Informe o nome.','err');return;}
   if(D.projetos.length>=15){notify('Limite de 15 projetos.','err');return;}
-  const {error}=await SB.from('projetos').insert({nome:n});
+  const lider=g('fpl')?.value.trim()||'';
+  const {error}=await SB.from('projetos').insert({nome:n,lider});
   if(error){notify('Erro.','err');return;}
   cModal();notify('Projeto criado!');await loadAllAndLog();rProj();
 }
@@ -1288,10 +1306,15 @@ async function delProj(id){
   if(error){notify('Erro.','err');return;}
   cModal();notify('Projeto excluído.');await loadAllAndLog();rProj();
 }
+
 function openNovoMarco(pId){
   showModal(`<div class="modal-hd"><div class="modal-title">Novo Marco</div><button class="mclose" onclick="cModal()">×</button></div>
   <div class="modal-bd">
     <div class="fg"><label class="fl">Descrição</label><input class="fi" id="fmn" placeholder="Ex: Entrega do módulo X"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">👤 Responsável</label><input class="fi" id="fmr" placeholder="Nome do responsável"></div>
+      <div class="fg"><label class="fl">📅 Data de Finalização</label><input class="fi" id="fmd" type="date"></div>
+    </div>
     <input type="hidden" id="fmpid" value="${pId}">
     <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveMarco()">Adicionar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
   </div>`);
@@ -1300,7 +1323,9 @@ async function saveMarco(){
   const pId=g('fmpid').value,p=D.projetos.find(x=>x.id===pId),n=g('fmn').value.trim();
   if(!n){notify('Informe o marco.','err');return;}
   if(p.marcos.length>=20){notify('Limite de 20 marcos.','err');return;}
-  const {error}=await SB.from('marcos').insert({projeto_id:pId,nome:n,finalizado:false});
+  const resp = g('fmr')?.value.trim()||'';
+  const data = g('fmd')?.value||null;
+  const {error}=await SB.from('marcos').insert({projeto_id:pId,nome:n,finalizado:false,responsavel:resp,data_finalizacao:data});
   if(error){notify('Erro.','err');return;}
   cModal();notify('Marco adicionado!');await loadAllAndLog();openProj(pId);rProj();
 }
@@ -1528,23 +1553,22 @@ async function renderPlanoAcao(krId, krNome){
     .eq('resultado_chave_id', krId)
     .order('ordem');
 
-  const adm = CU.role === 'admin';
+  const pe = podeEditarKR(krId); // admin OU usuário da unidade
   const bd  = g('pa-body');
   if(!bd) return;
 
   const total = (linhas||[]).length;
 
   let h = `<div class="flex ic jb mb2">
-    <span style="font-size:13px;font-weight:600;color:#000">${total} linha(s) de ${20}</span>
-    ${adm && total < 20 ? `<button class="btn btn-p btn-sm" onclick="openNovaLinhaPA('${krId}','${krNome.replace(/'/g,'')}')">+ Nova Linha</button>` : ''}
+    <span style="font-size:13px;font-weight:600;color:#000">${total} linha(s) de 20</span>
+    ${pe && total < 20 ? `<button class="btn btn-p btn-sm" onclick="openNovaLinhaPA('${krId}','${krNome.replace(/'/g,'')}')">+ Nova Linha</button>` : ''}
   </div>`;
 
   if(total === 0){
     h += `<div style="text-align:center;padding:28px;color:var(--text3);font-size:13px">
-      Nenhuma linha cadastrada.<br>${adm?'Clique em "+ Nova Linha" para começar.':''}
+      Nenhuma linha cadastrada.<br>${pe?'Clique em "+ Nova Linha" para começar.':''}
     </div>`;
   } else {
-    // Cabeçalho da tabela
     h += `<div style="overflow-x:auto">
       <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:700px">
         <thead>
@@ -1566,7 +1590,7 @@ async function renderPlanoAcao(krId, krNome){
               <td style="padding:9px 10px;color:var(--text2);white-space:nowrap;min-width:90px">${l.quando||'—'}</td>
               <td style="padding:9px 10px;color:var(--text2);white-space:nowrap;min-width:90px">${l.quanto||'—'}</td>
               <td style="padding:9px 10px;white-space:nowrap">
-                ${adm?`<div class="flex ic gap2">
+                ${pe?`<div class="flex ic gap2">
                   <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editarLinhaPA('${l.id}','${krId}','${krNome.replace(/'/g,'')}')">✎</button>
                   <button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delLinhaPA('${l.id}','${krId}','${krNome.replace(/'/g,'')}')">🗑</button>
                 </div>`:''}
@@ -2172,6 +2196,184 @@ async function delAnomalia(id, unidadeId, unidadeNome){
   notify('Anomalia excluída.');
   await registrarUpdate();
   await renderDiario(unidadeId, unidadeNome);
+}
+
+// ── ANEXOS KR ─────────────────────────────
+const BUCKET = 'anexos-kr';
+
+function formatBytes(bytes){
+  if(!bytes) return '—';
+  if(bytes < 1024) return bytes + ' B';
+  if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function iconeArquivo(tipo){
+  if(!tipo) return '📄';
+  if(tipo.includes('image')) return '🖼';
+  if(tipo.includes('pdf')) return '📕';
+  if(tipo.includes('word') || tipo.includes('document')) return '📘';
+  if(tipo.includes('excel') || tipo.includes('sheet')) return '📗';
+  if(tipo.includes('powerpoint') || tipo.includes('presentation')) return '📙';
+  if(tipo.includes('text') || tipo.includes('csv')) return '📃';
+  return '📄';
+}
+
+async function openAnexos(krId, krNome){
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">📎 Anexos</div>
+    <div class="modal-sub" style="max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${krNome}</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd-lg" id="anx-body">
+    <div class="loading"><div class="spin"></div>Carregando...</div>
+  </div>`, true);
+  await renderAnexos(krId, krNome);
+}
+
+async function renderAnexos(krId, krNome){
+  const {data:anexos} = await SB
+    .from('anexos_kr')
+    .select('*')
+    .eq('resultado_chave_id', krId)
+    .order('created_at', {ascending: false});
+
+  const bd = g('anx-body'); if(!bd) return;
+  const pe = podeEditarKR(krId);
+  const total = (anexos||[]).length;
+
+  let h = `
+  <div class="flex ic jb mb3">
+    <span style="font-size:13px;font-weight:600;color:#000">${total} arquivo(s) anexado(s)</span>
+  </div>`;
+
+  // Área de upload
+  if(pe){
+    h += `<div style="background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:20px" id="drop-zone"
+      ondragover="event.preventDefault();this.style.borderColor='var(--acc)'"
+      ondragleave="this.style.borderColor='var(--border2)'"
+      ondrop="handleDrop(event,'${krId}','${krNome}')">
+      <div style="font-size:28px;margin-bottom:8px">📎</div>
+      <div style="font-size:14px;font-weight:600;color:#000;margin-bottom:4px">Arraste arquivos aqui</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">ou clique para selecionar — máx 10MB por arquivo</div>
+      <input type="file" id="anx-input" multiple style="display:none" onchange="uploadAnexos(this,'${krId}','${krNome}')">
+      <button class="btn btn-p btn-sm" onclick="g('anx-input').click()">Selecionar arquivos</button>
+    </div>
+    <div id="anx-progress" style="display:none;margin-bottom:16px">
+      <div style="font-size:13px;color:var(--text2);margin-bottom:6px">Enviando...</div>
+      <div style="height:6px;background:var(--bg5);border-radius:3px;overflow:hidden">
+        <div id="anx-bar" style="height:100%;width:0%;background:var(--acc);border-radius:3px;transition:width .3s"></div>
+      </div>
+    </div>`;
+  }
+
+  if(total === 0){
+    h += `<div style="text-align:center;padding:24px;color:var(--text3);font-size:13px">Nenhum arquivo anexado ainda.</div>`;
+  } else {
+    h += `<div style="display:flex;flex-direction:column;gap:8px">`;
+    (anexos||[]).forEach(a=>{
+      const dt = new Date(a.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      h += `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
+        <div style="font-size:24px;flex-shrink:0">${iconeArquivo(a.tipo)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nome_arquivo}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${formatBytes(a.tamanho)} · ${dt} · ${a.uploaded_by||'—'}</div>
+        </div>
+        <div class="flex ic gap2">
+          <button class="btn btn-p btn-sm" style="padding:5px 10px;min-height:unset;font-size:12px" onclick="downloadAnexo('${a.storage_path}','${a.nome_arquivo}')">⬇ Baixar</button>
+          ${pe?`<button class="btn btn-d btn-sm" style="padding:5px 10px;min-height:unset;font-size:12px" onclick="delAnexo('${a.id}','${a.storage_path}','${krId}','${krNome}')">🗑</button>`:''}
+        </div>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+
+  if(pe) h += `</div>`;
+  bd.innerHTML = h;
+}
+
+async function handleDrop(event, krId, krNome){
+  event.preventDefault();
+  g('drop-zone').style.borderColor = 'var(--border2)';
+  const files = event.dataTransfer.files;
+  if(files.length) await uploadArquivos(files, krId, krNome);
+}
+
+async function uploadAnexos(input, krId, krNome){
+  if(!input.files.length) return;
+  await uploadArquivos(input.files, krId, krNome);
+}
+
+async function uploadArquivos(files, krId, krNome){
+  const prog = g('anx-progress');
+  const bar  = g('anx-bar');
+  if(prog) prog.style.display = 'block';
+
+  let sucesso = 0;
+  let erros   = 0;
+
+  for(let i = 0; i < files.length; i++){
+    const file = files[i];
+    if(bar) bar.style.width = Math.round((i/files.length)*100) + '%';
+
+    // Validar tamanho (10MB)
+    if(file.size > 10*1024*1024){
+      notify(`"${file.name}" excede 10MB — ignorado.`, 'err');
+      erros++; continue;
+    }
+
+    // Caminho único no storage
+    const ext  = file.name.split('.').pop();
+    const path = `${krId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+    // Upload para o Supabase Storage
+    const {error:upErr} = await SB.storage.from(BUCKET).upload(path, file, {
+      contentType: file.type,
+      upsert: false
+    });
+
+    if(upErr){ notify(`Erro ao enviar "${file.name}": ${upErr.message}`, 'err'); erros++; continue; }
+
+    // Registrar na tabela
+    const {error:dbErr} = await SB.from('anexos_kr').insert({
+      resultado_chave_id: krId,
+      nome_arquivo:       file.name,
+      tamanho:            file.size,
+      tipo:               file.type,
+      storage_path:       path,
+      uploaded_by:        CU.name
+    });
+
+    if(dbErr){ notify(`Erro ao registrar "${file.name}".`, 'err'); erros++; }
+    else sucesso++;
+  }
+
+  if(bar) bar.style.width = '100%';
+  setTimeout(async()=>{
+    if(prog) prog.style.display = 'none';
+    if(sucesso > 0) notify(`${sucesso} arquivo(s) enviado(s) com sucesso!`);
+    await renderAnexos(krId, krNome);
+  }, 500);
+}
+
+async function downloadAnexo(path, nome){
+  const {data, error} = await SB.storage.from(BUCKET).download(path);
+  if(error){ notify('Erro ao baixar arquivo.', 'err'); return; }
+  const url = URL.createObjectURL(data);
+  const a   = document.createElement('a');
+  a.href = url; a.download = nome; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function delAnexo(id, path, krId, krNome){
+  if(!confirm('Excluir este anexo?')) return;
+  // Remover do storage
+  await SB.storage.from(BUCKET).remove([path]);
+  // Remover do banco
+  const {error} = await SB.from('anexos_kr').delete().eq('id', id);
+  if(error){ notify('Erro ao excluir.', 'err'); return; }
+  notify('Anexo excluído.');
+  await renderAnexos(krId, krNome);
 }
 
 // ── COMENTÁRIOS KR ────────────────────────
