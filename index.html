@@ -1001,6 +1001,7 @@ function rOKR(){
             <div class="flex ic gap2">
               <span style="font-weight:700;color:${ghx(rs)}">${rs}%</span>${badge(rs)}
               ${pe?`<button class="btn btn-p btn-sm" onclick="event.stopPropagation();openNovoOKR('${r.id}')">+Obj</button>`:''}
+              ${pe?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="event.stopPropagation();editResp('${r.id}','${r.name.replace(/'/g,'')}')">✎</button>`:''}
               ${adm?`<button class="btn btn-d btn-sm" onclick="event.stopPropagation();delResp('${r.id}')" title="Excluir responsável">🗑</button>`:''}
             </div>
           </div>
@@ -1106,6 +1107,28 @@ async function saveResp(){
   const {error}=await SB.from('responsaveis').insert({unidade_id:uId,nome:n});
   if(error){notify('Erro.','err');return;}
   cModal();notify('Responsável adicionado!');await loadAllAndLog();rOKR();
+}
+
+function editResp(id, nomeAtual){
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">Editar Responsável</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome</label><input class="fi" id="er-nome" value="${nomeAtual}" placeholder="Nome do responsável"></div>
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" onclick="updResp('${id}')">Atualizar</button>
+      <button class="btn btn-full" onclick="cModal()">Cancelar</button>
+    </div>
+  </div>`);
+}
+
+async function updResp(id){
+  const n = g('er-nome').value.trim();
+  if(!n){notify('Informe o nome.','err');return;}
+  const {error} = await SB.from('responsaveis').update({nome:n}).eq('id',id);
+  if(error){notify('Erro ao atualizar.','err');return;}
+  cModal();notify('Responsável atualizado!');await loadAllAndLog();rOKR();
 }
 
 function openNovoOKR(rId){
