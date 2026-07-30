@@ -501,29 +501,42 @@ function bootApp(){
   g('av').textContent=CU.name[0].toUpperCase();
   g('unm').textContent=nm;
 
+  // Verificar se é usuário da unidade Faturamento
+  const unit = D.unidades.find(u=>u.id===CU.unidadeId);
+  const isFaturamento = unit && unit.name.toLowerCase().includes('faturamento');
+  CU.isFaturamento = isFaturamento;
+
   if(CU.role==='admin'){
     g('url').textContent='Administrador';
     g('admin-nav').style.display='block';
     loadUpdated();
     go('dash');
   } else {
-    // Usuário comum — mostrar nome da unidade
-    const unit = D.unidades.find(u=>u.id===CU.unidadeId);
     g('url').textContent = unit ? unit.name : 'Colaborador';
     // Ocultar menus que não pode acessar
     ['ni-dash','ni-mapa','ni-proj','ni-dir'].forEach(id=>{
       const el=g(id); if(el) el.style.display='none';
     });
+    // Ocultar Gestão de Operadoras se não for Faturamento
+    if(!isFaturamento){
+      const elOper=g('ni-oper'); if(elOper) elOper.style.display='none';
+    }
     loadUpdated();
-    go('okr');
+    // Faturamento abre direto em Operadoras, demais em OKR
+    go(isFaturamento ? 'oper' : 'okr');
   }
 }
 
 // ── NAVIGATION ────────────────────────────
 function go(page){
-  // Usuário comum só pode acessar OKR
-  if(CU && CU.role!=='admin' && page!=='okr'){
-    page='okr';
+  // Controle de acesso por perfil
+  if(CU && CU.role!=='admin'){
+    const isFaturamento = CU.isFaturamento;
+    const paginasPermitidas = ['okr'];
+    if(isFaturamento) paginasPermitidas.push('oper');
+    if(!paginasPermitidas.includes(page)){
+      page = isFaturamento ? 'oper' : 'okr';
+    }
   }
   _pg=page; closeSidebar();
   document.querySelectorAll('.nav-it').forEach(n=>n.classList.remove('on'));
