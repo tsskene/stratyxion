@@ -296,6 +296,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
       <div class="nav-sec">
         <div class="nav-lbl">Bloco 3</div>
         <div class="nav-it" id="ni-proj" onclick="go('proj')"><span class="nav-ic">◆</span>Projetos Especiais</div>
+        <div class="nav-it" id="ni-oper" onclick="go('oper')"><span class="nav-ic">◆</span>Gestão de Operadoras</div>
       </div>
       <div class="nav-sec" id="admin-nav" style="display:none">
         <div class="nav-lbl">Admin</div>
@@ -533,6 +534,7 @@ function go(page){
   else if(page==='mapa') rMapa();
   else if(page==='okr') rOKR();
   else if(page==='proj') rProj();
+  else if(page==='oper') rOper();
   else if(page==='adm') rAdm();
 }
 
@@ -1351,6 +1353,284 @@ async function saveMarco(){
   const {error}=await SB.from('marcos').insert({projeto_id:pId,nome:n,finalizado:false,responsavel:resp,data_finalizacao:data});
   if(error){notify('Erro.','err');return;}
   cModal();notify('Marco adicionado!');await loadAllAndLog();openProj(pId);rProj();
+}
+
+// ── GESTÃO DE OPERADORAS ──────────────────
+async function rOper(){
+  const adm = CU.role==='admin';
+  const {data:ops}  = await SB.from('operadoras').select('*').order('created_at');
+  const {data:ativs}= await SB.from('operadoras_atividades').select('*').order('created_at');
+
+  const total     = (ops||[]).length;
+  const totalAtiv = (ativs||[]).length;
+  const feitas    = (ativs||[]).filter(a=>a.feito).length;
+  const taxaGeral = totalAtiv ? Math.round(feitas/totalAtiv*100) : 0;
+  const vencidas  = (ativs||[]).filter(a=>!a.feito && a.prazo && new Date(a.prazo) < new Date()).length;
+
+  let h=`<div class="page-hdr">
+    <div><div class="page-title">Gestão de Operadoras</div><div class="page-sub">${total} operadora(s) cadastrada(s)</div></div>
+    ${adm?`<button class="btn btn-p" onclick="openNovaOperadora()">+ Nova Operadora</button>`:''}
+  </div>
+  <div class="grid4 mb3">
+    ${met('Taxa de Conclusão',taxaGeral+'%',badge(taxaGeral))}
+    ${met('Operadoras',total,'<span class="chip">cadastradas</span>')}
+    ${met('Atividades Feitas',feitas+' / '+totalAtiv,badge(totalAtiv?Math.round(feitas/totalAtiv*100):0))}
+    ${met('Vencidas',vencidas,'<span class="badge '+(vencidas>0?'b-R':'b-G')+'">'+(vencidas>0?'Atenção':'OK')+'</span>')}
+  </div>`;
+
+  if(!total){
+    h+=`<div class="card" style="text-align:center;padding:40px;color:var(--text3)">
+      <div style="font-size:32px;margin-bottom:8px">◈</div>
+      <div style="font-size:14px">Nenhuma operadora cadastrada.</div>
+      ${adm?`<button class="btn btn-p" style="margin-top:16px" onclick="openNovaOperadora()">+ Cadastrar primeira operadora</button>`:''}
+    </div>`;
+  } else {
+    (ops||[]).forEach(op=>{
+      const opAtivs = (ativs||[]).filter(a=>a.operadora_id===op.id);
+      const opFeitas = opAtivs.filter(a=>a.feito).length;
+      const opTaxa  = opAtivs.length ? Math.round(opFeitas/opAtivs.length*100) : 0;
+
+      h+=`<div class="card" style="margin-bottom:14px;border-top:3px solid ${ghx(opTaxa)}">
+        <div class="flex ic jb mb2">
+          <div>
+            <div style="font-size:16px;font-weight:700;color:#000">${op.nome}</div>
+            ${op.lider?`<div style="font-size:12px;color:var(--text3);margin-top:2px">👤 Líder: <b>${op.lider}</b></div>`:''}
+          </div>
+          <div class="flex ic gap2">
+            <span style="font-family:var(--font-d);font-size:22px;font-weight:800;color:${ghx(opTaxa)}">${opTaxa}%</span>
+            ${badge(opTaxa)}
+            ${adm?`<button class="btn btn-sm" style="padding:5px 9px;min-height:unset;font-size:11px" onclick="editOperadora('${op.id}','${op.nome.replace(/'/g,'')}','${(op.lider||'').replace(/'/g,'')}')">✎</button>`:''}
+            ${adm?`<button class="btn btn-d btn-sm" style="padding:5px 9px;min-height:unset;font-size:11px" onclick="delOperadora('${op.id}')">🗑</button>`:''}
+          </div>
+        </div>
+        ${pbar(opTaxa,7)}
+        <div class="flex ic jb mt3 mb2">
+          <span style="font-size:12px;font-weight:600;color:var(--text2)">${opFeitas}/${opAtivs.length} atividades concluídas</span>
+          ${adm?`<button class="btn btn-p btn-sm" onclick="openNovaAtividade('${op.id}')">+ Atividade</button>`:''}
+        </div>
+        ${opAtivs.length===0?`<div style="font-size:12px;color:var(--text3);padding:8px 0">Nenhuma atividade cadastrada.</div>`:''}
+        ${opAtivs.map(a=>{
+          const prazoFmt = a.prazo ? new Date(a.prazo+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+          const vencida  = !a.feito && a.prazo && new Date(a.prazo) < new Date();
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--border);flex-wrap:wrap">
+            <div class="mcheck ${a.feito?'done':''}" onclick="${adm?`togAtividade('${a.id}',${!a.feito})`:''}">
+              ${a.feito?'✓':''}
+            </div>
+            <div style="flex:1;min-width:180px">
+              <div style="font-size:13px;font-weight:500;${a.feito?'text-decoration:line-through;color:var(--text3)':'color:#000'}">${a.atividade}</div>
+              <div class="flex ic gap3 mt1" style="flex-wrap:wrap">
+                ${a.responsavel?`<span style="font-size:11px;color:var(--text3)">👤 ${a.responsavel}</span>`:''}
+                <span style="font-size:11px;color:${vencida?'var(--R)':'var(--text3)'}">📅 ${prazoFmt}${vencida?' ⚠':''}</span>
+              </div>
+            </div>
+            <div class="flex ic gap2">
+              <span class="badge ${a.feito?'b-G':'b-R'}">${a.feito?'Feito':'Pendente'}</span>
+              <button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:12px;border-color:#7c3aed;color:#7c3aed" onclick="openAnexosAtiv('${a.id}','${a.atividade.replace(/'/g,'')}')">📎</button>
+              ${adm?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editAtividade('${a.id}','${op.id}')">✎</button>`:''}
+              ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delAtividade('${a.id}')">🗑</button>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    });
+  }
+  h+=leg();
+  setPage(h);
+}
+
+// ── OPERADORAS CRUD ───────────────────────
+function openNovaOperadora(){
+  showModal(`<div class="modal-hd"><div class="modal-title">Nova Operadora</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome da Operadora</label><input class="fi" id="op-nome" placeholder="Ex: Operadora ABC"></div>
+    <div class="fg"><label class="fl">👤 Líder</label><input class="fi" id="op-lider" placeholder="Nome do líder"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveOperadora()">Cadastrar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+
+async function saveOperadora(){
+  const nome = g('op-nome').value.trim();
+  if(!nome){notify('Informe o nome da operadora.','err');return;}
+  const {error}=await SB.from('operadoras').insert({nome, lider:g('op-lider').value.trim()});
+  if(error){notify('Erro: '+error.message,'err');return;}
+  cModal();notify('Operadora cadastrada!');await registrarUpdate();rOper();
+}
+
+function editOperadora(id, nomeAtual, liderAtual){
+  showModal(`<div class="modal-hd"><div class="modal-title">Editar Operadora</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Nome da Operadora</label><input class="fi" id="ope-nome" value="${nomeAtual}"></div>
+    <div class="fg"><label class="fl">👤 Líder</label><input class="fi" id="ope-lider" value="${liderAtual}"></div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="updOperadora('${id}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+
+async function updOperadora(id){
+  const nome = g('ope-nome').value.trim();
+  if(!nome){notify('Informe o nome.','err');return;}
+  const {error}=await SB.from('operadoras').update({nome, lider:g('ope-lider').value.trim(), updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Operadora atualizada!');await registrarUpdate();rOper();
+}
+
+async function delOperadora(id){
+  if(!confirm('Excluir esta operadora e todas as suas atividades?'))return;
+  const {error}=await SB.from('operadoras').delete().eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify('Operadora excluída.');await registrarUpdate();rOper();
+}
+
+// ── ATIVIDADES CRUD ───────────────────────
+function openNovaAtividade(opId){
+  showModal(`<div class="modal-hd"><div class="modal-title">Nova Atividade</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Atividade</label><textarea class="fi" id="at-atv" rows="2" placeholder="Descreva a atividade..." style="resize:vertical"></textarea></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">👤 Responsável</label><input class="fi" id="at-resp" placeholder="Nome do responsável"></div>
+      <div class="fg"><label class="fl">📅 Prazo</label><input class="fi" id="at-prazo" type="date"></div>
+    </div>
+    <input type="hidden" id="at-opid" value="${opId}">
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="saveAtividade()">Adicionar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+
+async function saveAtividade(){
+  const atv = g('at-atv').value.trim();
+  if(!atv){notify('Descreva a atividade.','err');return;}
+  const {error}=await SB.from('operadoras_atividades').insert({
+    operadora_id: g('at-opid').value,
+    atividade:    atv,
+    responsavel:  g('at-resp').value.trim(),
+    prazo:        g('at-prazo').value||null
+  });
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Atividade adicionada!');await registrarUpdate();rOper();
+}
+
+async function editAtividade(id, opId){
+  const {data:a}=await SB.from('operadoras_atividades').select('*').eq('id',id).single();
+  if(!a)return;
+  showModal(`<div class="modal-hd"><div class="modal-title">Editar Atividade</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Atividade</label><textarea class="fi" id="eat-atv" rows="2" style="resize:vertical">${a.atividade}</textarea></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">👤 Responsável</label><input class="fi" id="eat-resp" value="${a.responsavel||''}"></div>
+      <div class="fg"><label class="fl">📅 Prazo</label><input class="fi" id="eat-prazo" type="date" value="${a.prazo||''}"></div>
+    </div>
+    <div class="btn-row"><button class="btn btn-p btn-full" onclick="updAtividade('${id}')">Atualizar</button><button class="btn btn-full" onclick="cModal()">Cancelar</button></div>
+  </div>`);
+}
+
+async function updAtividade(id){
+  const atv = g('eat-atv').value.trim();
+  if(!atv){notify('Descreva a atividade.','err');return;}
+  const {error}=await SB.from('operadoras_atividades').update({
+    atividade:   atv,
+    responsavel: g('eat-resp').value.trim(),
+    prazo:       g('eat-prazo').value||null,
+    updated_at:  new Date().toISOString()
+  }).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  cModal();notify('Atividade atualizada!');await registrarUpdate();rOper();
+}
+
+async function togAtividade(id, novoStatus){
+  const {error}=await SB.from('operadoras_atividades').update({feito:novoStatus, updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify(novoStatus?'Atividade concluída!':'Atividade reaberta.');
+  await registrarUpdate();rOper();
+}
+
+async function delAtividade(id){
+  if(!confirm('Excluir esta atividade?'))return;
+  const {error}=await SB.from('operadoras_atividades').delete().eq('id',id);
+  if(error){notify('Erro.','err');return;}
+  notify('Atividade excluída.');await registrarUpdate();rOper();
+}
+
+// ── ANEXOS DAS ATIVIDADES ─────────────────
+const BUCKET_OP = 'operadoras-anexos';
+
+async function openAnexosAtiv(atividadeId, atividadeNome){
+  showModal(`<div class="modal-hd">
+    <div><div class="modal-title">📎 Anexos</div>
+    <div class="modal-sub" style="max-width:500px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${atividadeNome}</div></div>
+    <button class="mclose" onclick="cModal()">×</button>
+  </div>
+  <div class="modal-bd-lg" id="anx-op-body">
+    <div class="loading"><div class="spin"></div>Carregando...</div>
+  </div>`, true);
+  await renderAnexosAtiv(atividadeId, atividadeNome);
+}
+
+async function renderAnexosAtiv(atividadeId, atividadeNome){
+  const {data:anexos}=await SB.from('operadoras_anexos').select('*').eq('atividade_id',atividadeId).order('created_at',{ascending:false});
+  const bd=g('anx-op-body'); if(!bd)return;
+  const adm=CU.role==='admin';
+  const total=(anexos||[]).length;
+
+  let h=`<div class="flex ic jb mb3">
+    <span style="font-size:13px;font-weight:600;color:#000">${total} arquivo(s) anexado(s)</span>
+  </div>
+  <div style="background:var(--bg3);border:2px dashed var(--border2);border-radius:var(--r);padding:20px;text-align:center;margin-bottom:20px">
+    <div style="font-size:28px;margin-bottom:8px">📎</div>
+    <div style="font-size:13px;font-weight:600;color:#000;margin-bottom:4px">Arraste arquivos aqui</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:12px">ou clique para selecionar — máx 10MB</div>
+    <input type="file" id="anx-op-input" multiple style="display:none" onchange="uploadAnexosAtiv(this,'${atividadeId}','${atividadeNome}')">
+    <button class="btn btn-p btn-sm" onclick="g('anx-op-input').click()">Selecionar arquivos</button>
+  </div>`;
+
+  if(!total){
+    h+=`<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">Nenhum arquivo anexado.</div>`;
+  } else {
+    h+=`<div style="display:flex;flex-direction:column;gap:8px">`;
+    (anexos||[]).forEach(a=>{
+      const dt=new Date(a.created_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+      h+=`<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r)">
+        <div style="font-size:24px;flex-shrink:0">${iconeArquivo(a.tipo)}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:#000;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${a.nome_arquivo}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${formatBytes(a.tamanho)} · ${dt} · ${a.uploaded_by||'—'}</div>
+        </div>
+        <div class="flex ic gap2">
+          <button class="btn btn-p btn-sm" style="padding:5px 10px;min-height:unset;font-size:12px" onclick="downloadAnexoOp('${a.storage_path}','${a.nome_arquivo}')">⬇ Baixar</button>
+          ${adm?`<button class="btn btn-d btn-sm" style="padding:5px 10px;min-height:unset;font-size:12px" onclick="delAnexoOp('${a.id}','${a.storage_path}','${atividadeId}','${atividadeNome}')">🗑</button>`:''}
+        </div>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+  bd.innerHTML=h;
+}
+
+async function uploadAnexosAtiv(input, atividadeId, atividadeNome){
+  for(let i=0;i<input.files.length;i++){
+    const file=input.files[i];
+    if(file.size>10*1024*1024){notify(`"${file.name}" excede 10MB.`,'err');continue;}
+    const ext=file.name.split('.').pop();
+    const path=`${atividadeId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const {error:upErr}=await SB.storage.from(BUCKET_OP).upload(path,file,{contentType:file.type,upsert:false});
+    if(upErr){notify(`Erro ao enviar "${file.name}".`,'err');continue;}
+    await SB.from('operadoras_anexos').insert({atividade_id:atividadeId,nome_arquivo:file.name,tamanho:file.size,tipo:file.type,storage_path:path,uploaded_by:CU.name});
+  }
+  notify('Arquivo(s) enviado(s)!');
+  await renderAnexosAtiv(atividadeId, atividadeNome);
+}
+
+async function downloadAnexoOp(path, nome){
+  const {data,error}=await SB.storage.from(BUCKET_OP).download(path);
+  if(error){notify('Erro ao baixar.','err');return;}
+  const url=URL.createObjectURL(data);
+  const a=document.createElement('a'); a.href=url; a.download=nome; a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function delAnexoOp(id, path, atividadeId, atividadeNome){
+  if(!confirm('Excluir este anexo?'))return;
+  await SB.storage.from(BUCKET_OP).remove([path]);
+  await SB.from('operadoras_anexos').delete().eq('id',id);
+  notify('Anexo excluído.');
+  await renderAnexosAtiv(atividadeId, atividadeNome);
 }
 
 // ── ADMIN ─────────────────────────────────
