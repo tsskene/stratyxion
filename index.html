@@ -496,46 +496,64 @@ async function doLogout(){
 }
 
 function bootApp(){
-  g('auth').classList.remove('on'); g('app').classList.add('on');
-  const nm=CU.name.length>20?CU.name.slice(0,20)+'…':CU.name;
-  g('av').textContent=CU.name[0].toUpperCase();
-  g('unm').textContent=nm;
+  try {
+    g('auth').classList.remove('on'); g('app').classList.add('on');
+    const nm=CU.name.length>20?CU.name.slice(0,20)+'…':CU.name;
+    g('av').textContent=CU.name[0].toUpperCase();
+    g('unm').textContent=nm;
 
-  // Verificar se é usuário da unidade Faturamento
-  const unit = D.unidades.find(u=>u.id===CU.unidadeId);
-  const isFaturamento = unit && unit.name.toLowerCase().includes('faturamento');
-  CU.isFaturamento = isFaturamento;
+    // Unidades com acesso especial
+    const unit = D.unidades.find(u=>u.id===CU.unidadeId);
+    const unitNome = (unit?.name||'').toLowerCase();
+    const isFaturamento  = unitNome.includes('faturamento');
+    const temAcessoProj  = unitNome.includes('supervisão') || unitNome.includes('supervisao') ||
+                           unitNome.includes('faturamento') ||
+                           unitNome.includes('central de atendimento') || unitNome.includes('central');
+    CU.isFaturamento = isFaturamento;
+    CU.temAcessoProj = temAcessoProj;
 
-  if(CU.role==='admin'){
-    g('url').textContent='Administrador';
-    g('admin-nav').style.display='block';
-    loadUpdated();
-    go('dash');
-  } else {
-    g('url').textContent = unit ? unit.name : 'Colaborador';
-    // Ocultar menus que não pode acessar
-    ['ni-dash','ni-mapa','ni-proj','ni-dir'].forEach(id=>{
-      const el=g(id); if(el) el.style.display='none';
-    });
-    // Ocultar Gestão de Operadoras se não for Faturamento
-    if(!isFaturamento){
-      const elOper=g('ni-oper'); if(elOper) elOper.style.display='none';
+    if(CU.role==='admin'){
+      g('url').textContent='Administrador';
+      const adminNav=g('admin-nav'); if(adminNav) adminNav.style.display='block';
+      loadUpdated();
+      go('dash');
+    } else {
+      g('url').textContent = unit ? unit.name : 'Colaborador';
+      // Ocultar menus padrão
+      ['ni-dash','ni-mapa','ni-dir'].forEach(id=>{
+        const el=g(id); if(el) el.style.display='none';
+      });
+      // Projetos Especiais: só para unidades autorizadas
+      if(!temAcessoProj){
+        const elProj=g('ni-proj'); if(elProj) elProj.style.display='none';
+      }
+      // Gestão de Operadoras: só para Faturamento
+      if(!isFaturamento){
+        const elOper=g('ni-oper'); if(elOper) elOper.style.display='none';
+      }
+      loadUpdated();
+      // Redirecionar para página inicial adequada
+      if(isFaturamento) go('oper');
+      else if(temAcessoProj) go('proj');
+      else go('okr');
     }
-    loadUpdated();
-    // Faturamento abre direto em Operadoras, demais em OKR
-    go(isFaturamento ? 'oper' : 'okr');
+  } catch(e){
+    console.error('Erro no bootApp:', e);
+    g('auth').classList.remove('on'); g('app').classList.add('on');
+    go(CU.role==='admin'?'dash':'okr');
   }
 }
 
 // ── NAVIGATION ────────────────────────────
 function go(page){
-  // Controle de acesso por perfil
   if(CU && CU.role!=='admin'){
-    const isFaturamento = CU.isFaturamento;
-    const paginasPermitidas = ['okr'];
-    if(isFaturamento) paginasPermitidas.push('oper');
-    if(!paginasPermitidas.includes(page)){
-      page = isFaturamento ? 'oper' : 'okr';
+    const permitidas = ['okr'];
+    if(CU.isFaturamento) permitidas.push('oper');
+    if(CU.temAcessoProj) permitidas.push('proj');
+    if(!permitidas.includes(page)){
+      if(CU.isFaturamento) page='oper';
+      else if(CU.temAcessoProj) page='proj';
+      else page='okr';
     }
   }
   _pg=page; closeSidebar();
@@ -1234,7 +1252,7 @@ async function updOKR(id){
 
 // ── PROJETOS ──────────────────────────────
 function rProj(){
-  const adm=CU.role==='admin';
+  const adm = CU.role==='admin' || !!(CU.temAcessoProj);
   const gav=avg(D.projetos.map(p=>ppct(p)));
   let h=`<div class="page-hdr">
     <div><div class="page-title">Projetos Especiais</div><div class="page-sub">${D.projetos.length}/15 projetos ativos</div></div>
@@ -1266,7 +1284,7 @@ function rProj(){
 }
 
 function openProj(id){
-  const p=D.projetos.find(x=>x.id===id),pc=ppct(p),adm=CU.role==='admin';
+  const p=D.projetos.find(x=>x.id===id),pc=ppct(p),adm=CU.role==='admin'||!!(CU.temAcessoProj);
   const done=p.marcos.filter(m=>m.done).length;
   let h=`<div class="modal-hd">
     <div>
