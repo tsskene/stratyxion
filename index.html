@@ -1283,9 +1283,16 @@ function rProj(){
   setPage(h);
 }
 
-function openProj(id){
+async function openProj(id){
   const p=D.projetos.find(x=>x.id===id),pc=ppct(p),adm=CU.role==='admin'||!!(CU.temAcessoProj);
   const done=p.marcos.filter(m=>m.done).length;
+
+  // Carregar atividades de todos os marcos do projeto
+  const {data:todasAtivs} = await SB.from('marcos_atividades')
+    .select('*')
+    .in('marco_id', p.marcos.map(m=>m.id))
+    .order('created_at');
+
   let h=`<div class="modal-hd">
     <div>
       <div class="modal-title">${p.name}</div>
@@ -1299,23 +1306,48 @@ function openProj(id){
       <span style="font-weight:600">Marcos (${p.marcos.length}/20)</span>
       ${adm&&p.marcos.length<20?`<button class="btn btn-p btn-sm" onclick="openNovoMarco('${id}')">+ Marco</button>`:''}
     </div>`;
+
   p.marcos.forEach(m=>{
     const dataFim = m.dataFim ? new Date(m.dataFim+'T12:00:00').toLocaleDateString('pt-BR') : '';
-    h+=`<div class="mstone" style="flex-wrap:wrap;gap:6px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div class="mcheck ${m.done?'done':''}" onclick="${adm?`togM('${id}','${m.id}',${!m.done})`:''}">
-        ${m.done?'✓':''}
-      </div>
-      <div style="flex:1;min-width:0">
-        <div class="mstone-nm ${m.done?'done':''}" style="margin:0">${m.name}</div>
-        <div style="display:flex;gap:12px;margin-top:4px;flex-wrap:wrap">
-          ${m.resp?`<span style="font-size:11px;color:var(--text3)">👤 ${m.resp}</span>`:''}
-          ${dataFim?`<span style="font-size:11px;color:var(--text3)">📅 ${dataFim}</span>`:''}
+    const mAtivs  = (todasAtivs||[]).filter(a=>a.marco_id===m.id);
+
+    h+=`<div style="border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden">
+      <div class="flex ic gap2" style="padding:10px 12px;background:var(--bg3);flex-wrap:wrap">
+        <div class="mcheck ${m.done?'done':''}" onclick="${adm?`togM('${id}','${m.id}',${!m.done})`:''}">
+          ${m.done?'✓':''}
+        </div>
+        <div style="flex:1;min-width:0">
+          <div class="mstone-nm ${m.done?'done':''}" style="margin:0">${m.name}</div>
+          <div style="display:flex;gap:12px;margin-top:3px;flex-wrap:wrap">
+            ${m.resp?`<span style="font-size:11px;color:var(--text3)">👤 ${m.resp}</span>`:''}
+            ${dataFim?`<span style="font-size:11px;color:var(--text3)">📅 ${dataFim}</span>`:''}
+          </div>
+        </div>
+        <div class="flex ic gap2">
+          <span class="badge ${m.done?'b-G':'b-R'}">${m.done?'Feito':'Pendente'}</span>
+          ${adm?`<button class="btn btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="editMarco('${m.id}','${id}')">✎</button>`:''}
+          ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delMarco('${id}','${m.id}')">🗑</button>`:''}
         </div>
       </div>
-      <span class="badge ${m.done?'b-G':'b-R'}">${m.done?'Feito':'Pendente'}</span>
-      ${adm?`<button class="btn btn-d btn-sm" style="padding:4px 8px;min-height:unset;font-size:11px" onclick="delMarco('${id}','${m.id}')" title="Excluir marco">🗑</button>`:''}
+      <div style="padding:10px 12px">
+        <div class="flex ic jb mb2">
+          <span style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">Atividades (${mAtivs.length}/5)</span>
+          ${adm&&mAtivs.length<5?`<button class="btn btn-p btn-sm" style="padding:3px 8px;min-height:unset;font-size:11px" onclick="openNovaAtivMarco('${m.id}','${id}')">+ Atividade</button>`:''}
+        </div>
+        ${mAtivs.length===0?`<div style="font-size:12px;color:var(--text3);padding:4px 0">Nenhuma atividade cadastrada.</div>`:''}
+        ${mAtivs.map(a=>{
+          const aData = a.data_finalizacao ? new Date(a.data_finalizacao+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid var(--border)">
+            <div style="flex:1;font-size:13px;color:#000">${a.descricao}</div>
+            <span style="font-size:11px;color:var(--text3);white-space:nowrap">📅 ${aData}</span>
+            ${adm?`<button class="btn btn-sm" style="padding:3px 7px;min-height:unset;font-size:11px" onclick="editAtivMarco('${a.id}','${id}')">✎</button>`:''}
+            ${adm?`<button class="btn btn-d btn-sm" style="padding:3px 7px;min-height:unset;font-size:11px" onclick="delAtivMarco('${a.id}','${id}')">🗑</button>`:''}
+          </div>`;
+        }).join('')}
+      </div>
     </div>`;
   });
+
   if(adm){
     h+=`<div class="divider"></div>
     <button class="btn btn-d btn-full" onclick="delProj('${id}')">🗑 Excluir Projeto</button>`;
@@ -1330,6 +1362,107 @@ async function togM(pId,mId,novoStatus){
   notify(novoStatus?'Marco finalizado!':'Marco reaberto.');
   registrarUpdate();
   await loadAllAndLog(); openProj(pId); rProj();
+}
+
+function editMarco(mId, projId){
+  const m = D.projetos.flatMap(p=>p.marcos).find(x=>x.id===mId);
+  if(!m) return;
+  showModal(`<div class="modal-hd"><div class="modal-title">Editar Marco</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição</label><input class="fi" id="em-desc" value="${m.name}"></div>
+    <div class="frow">
+      <div class="fg"><label class="fl">👤 Responsável</label><input class="fi" id="em-resp" value="${m.resp||''}"></div>
+      <div class="fg"><label class="fl">📅 Data de Finalização</label><input class="fi" id="em-data" type="date" value="${m.dataFim||''}"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" onclick="updMarco('${mId}','${projId}')">Salvar</button>
+      <button class="btn btn-full" onclick="openProj('${projId}')">Cancelar</button>
+    </div>
+  </div>`);
+}
+
+async function updMarco(mId, projId){
+  const desc = g('em-desc').value.trim();
+  if(!desc){notify('Informe a descrição.','err');return;}
+  const {error}=await SB.from('marcos').update({
+    nome:              desc,
+    responsavel:       g('em-resp').value.trim(),
+    data_finalizacao:  g('em-data').value||null
+  }).eq('id',mId);
+  if(error){notify('Erro ao atualizar.','err');return;}
+  notify('Marco atualizado!');
+  await loadAllAndLog(); openProj(projId); rProj();
+}
+
+// ── ATIVIDADES DOS MARCOS ─────────────────
+function openNovaAtivMarco(marcoId, projId){
+  showModal(`<div class="modal-hd"><div class="modal-title">Nova Atividade</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição da Atividade</label><textarea class="fi" id="am-desc" rows="2" placeholder="Descreva a atividade..." style="resize:vertical"></textarea></div>
+    <div class="fg"><label class="fl">📅 Data de Finalização</label><input class="fi" id="am-data" type="date"></div>
+    <input type="hidden" id="am-mid" value="${marcoId}">
+    <input type="hidden" id="am-pid" value="${projId}">
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" onclick="saveAtivMarco()">Adicionar</button>
+      <button class="btn btn-full" onclick="openProj('${projId}')">Cancelar</button>
+    </div>
+  </div>`);
+}
+
+async function saveAtivMarco(){
+  const desc = g('am-desc').value.trim();
+  const mid  = g('am-mid').value;
+  const pid  = g('am-pid').value;
+  if(!desc){notify('Descreva a atividade.','err');return;}
+  // Verificar limite de 5
+  const {data:existentes}=await SB.from('marcos_atividades').select('id').eq('marco_id',mid);
+  if((existentes||[]).length>=5){notify('Limite de 5 atividades por marco.','err');return;}
+  const {error}=await SB.from('marcos_atividades').insert({
+    marco_id:         mid,
+    descricao:        desc,
+    data_finalizacao: g('am-data').value||null
+  });
+  if(error){notify('Erro ao salvar.','err');return;}
+  notify('Atividade adicionada!');
+  await registrarUpdate();
+  await loadAllAndLog(); openProj(pid);
+}
+
+async function editAtivMarco(ativId, projId){
+  const {data:a}=await SB.from('marcos_atividades').select('*').eq('id',ativId).single();
+  if(!a) return;
+  showModal(`<div class="modal-hd"><div class="modal-title">Editar Atividade</div><button class="mclose" onclick="cModal()">×</button></div>
+  <div class="modal-bd">
+    <div class="fg"><label class="fl">Descrição da Atividade</label><textarea class="fi" id="eam-desc" rows="2" style="resize:vertical">${a.descricao}</textarea></div>
+    <div class="fg"><label class="fl">📅 Data de Finalização</label><input class="fi" id="eam-data" type="date" value="${a.data_finalizacao||''}"></div>
+    <div class="btn-row">
+      <button class="btn btn-p btn-full" onclick="updAtivMarco('${ativId}','${projId}')">Salvar</button>
+      <button class="btn btn-full" onclick="openProj('${projId}')">Cancelar</button>
+    </div>
+  </div>`);
+}
+
+async function updAtivMarco(ativId, projId){
+  const desc = g('eam-desc').value.trim();
+  if(!desc){notify('Descreva a atividade.','err');return;}
+  const {error}=await SB.from('marcos_atividades').update({
+    descricao:        desc,
+    data_finalizacao: g('eam-data').value||null,
+    updated_at:       new Date().toISOString()
+  }).eq('id',ativId);
+  if(error){notify('Erro ao atualizar.','err');return;}
+  notify('Atividade atualizada!');
+  await registrarUpdate();
+  openProj(projId);
+}
+
+async function delAtivMarco(ativId, projId){
+  if(!confirm('Excluir esta atividade?'))return;
+  const {error}=await SB.from('marcos_atividades').delete().eq('id',ativId);
+  if(error){notify('Erro ao excluir.','err');return;}
+  notify('Atividade excluída.');
+  await registrarUpdate();
+  openProj(projId);
 }
 async function delMarco(pId,mId){
   if(!confirm('Excluir este marco?'))return;
