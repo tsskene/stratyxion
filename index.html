@@ -1521,7 +1521,7 @@ async function saveMarco(){
 
 // ── GESTÃO DE OPERADORAS ──────────────────
 async function rOper(){
-  const adm = CU.role==='admin';
+  const adm = CU.role==='admin' || !!(CU.isFaturamento);
   const {data:ops}  = await SB.from('operadoras').select('*').order('created_at');
   const {data:ativs}= await SB.from('operadoras_atividades').select('*').order('created_at');
 
@@ -1730,7 +1730,7 @@ async function openAnexosAtiv(atividadeId, atividadeNome){
 async function renderAnexosAtiv(atividadeId, atividadeNome){
   const {data:anexos}=await SB.from('operadoras_anexos').select('*').eq('atividade_id',atividadeId).order('created_at',{ascending:false});
   const bd=g('anx-op-body'); if(!bd)return;
-  const adm=CU.role==='admin';
+  const adm=CU.role==='admin' || !!(CU.isFaturamento);
   const total=(anexos||[]).length;
 
   let h=`<div class="flex ic jb mb3">
